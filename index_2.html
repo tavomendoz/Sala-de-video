@@ -1,0 +1,746 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sala de Video</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: film-room console — video stage + transport on the left, play card + play list on the right; stacks on phones. Single dark look by choice (projected in a dim room). */
+:root {
+  color-scheme: dark;
+  --bg: #0f151c;
+  --panel: #161f29;
+  --panel-2: #1d2834;
+  --line: #2a3846;
+  --fg: #e8edf2;
+  --muted: #8d9cab;
+  --accent: #ff7a1a;      /* pylon orange */
+  --accent-ink: #1a0d02;
+  --off: #ff7a1a;
+  --def: #4fa3ff;
+  --st: #b9a6ff;
+  --good: #46c98b;
+  --bad: #ff5d5d;
+  --font-display: "Saira Condensed", "Arial Narrow", sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --r: 6px;
+}
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 14px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px;
+  box-sizing: border-box;
+}
+*, *::before, *::after { box-sizing: border-box; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app { display: flex; flex-direction: column; gap: 12px; min-height: 100%; }
+header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; }
+.brand h1 { font-family: var(--font-display); font-weight: 800; font-size: 26px; letter-spacing: .02em; text-transform: uppercase; margin: 0; line-height: 1; }
+.brand h1 span { color: var(--accent); }
+.brand .file { color: var(--muted); font-size: 13px; max-width: 32ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.btn { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--r); padding: 7px 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.btn.on { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.sm { padding: 5px 9px; font-size: 13px; }
+kbd { font-family: var(--font-mono); font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; }
+.btn.primary kbd, .btn.on kbd { color: inherit; border-color: currentColor; opacity: .7; }
+
+main { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 12px; flex: 1; min-height: 0; }
+@media (max-width: 980px) { main { grid-template-columns: minmax(0, 1fr); } }
+
+.left { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.stagebox { position: relative; background: #000; border-radius: var(--r); overflow: hidden; aspect-ratio: 16 / 9; max-width: 100%; border: 1px solid var(--line); }
+.stagebox:fullscreen { aspect-ratio: auto; border: 0; border-radius: 0; }
+video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+canvas#draw { position: absolute; touch-action: none; }
+canvas#draw.active { cursor: crosshair; }
+.drop { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--muted);
+  background: repeating-linear-gradient(90deg, transparent 0 9.9%, rgba(255,255,255,.05) 9.9% 10%), #0b1015; }
+.drop strong { display: block; font-family: var(--font-display); font-size: 28px; text-transform: uppercase; color: var(--fg); letter-spacing: .03em; }
+.drop p { margin: 6px 0 14px; max-width: 46ch; }
+.drop.over { outline: 3px dashed var(--accent); outline-offset: -10px; }
+.hud { position: absolute; left: 10px; top: 10px; display: flex; gap: 6px; pointer-events: none; }
+.hud span { background: rgba(0,0,0,.65); border-radius: 4px; padding: 3px 8px; font-family: var(--font-display); font-size: 18px; font-weight: 700; letter-spacing: .03em; }
+.hud .spd { color: var(--accent); }
+
+/* timeline */
+.timeline { position: relative; height: 34px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); cursor: pointer; touch-action: none; overflow: hidden; }
+.timeline .prog { position: absolute; inset: 0 auto 0 0; background: rgba(255,255,255,.07); pointer-events: none; }
+.timeline .mk { position: absolute; top: 7px; bottom: 7px; min-width: 3px; border-radius: 2px; opacity: .75; pointer-events: none; }
+.timeline .mk.sel { top: 3px; bottom: 3px; opacity: 1; box-shadow: 0 0 0 2px var(--fg); }
+.timeline .head { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--fg); pointer-events: none; }
+
+.transport { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.tc { font-family: var(--font-mono); font-size: 14px; min-width: 15ch; font-variant-numeric: tabular-nums; }
+.tc b { color: var(--fg); font-weight: 500; } .tc { color: var(--muted); }
+.group { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.group .btn { border: 0; border-radius: 0; border-right: 1px solid var(--line); }
+.group .btn:last-child { border-right: 0; }
+.spacer { flex: 1; }
+
+.drawbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); }
+.drawbar .lbl { font-family: var(--font-display); text-transform: uppercase; letter-spacing: .06em; font-size: 14px; color: var(--muted); margin-right: 4px; }
+.sw { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line); padding: 0; }
+.sw.on { border-color: var(--fg); box-shadow: 0 0 0 2px var(--bg) inset; }
+
+/* right */
+.right { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); }
+.card h2 { font-family: var(--font-display); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; font-size: 17px; margin: 0; display: flex; align-items: center; gap: 8px; }
+.card .hd { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.card .hd .spacer { flex: 1; }
+.form { padding: 12px; display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; }
+.form .f { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.form .c2 { grid-column: span 2; } .form .c4 { grid-column: 1 / -1; }
+.form label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.form input, .form select, .form textarea { background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 6px 7px; width: 100%; min-width: 0; }
+.form textarea { resize: vertical; min-height: 54px; }
+.form .times { display: flex; gap: 6px; align-items: center; grid-column: 1 / -1; flex-wrap: wrap; }
+.form .times .tc { min-width: 0; }
+.form[aria-disabled="true"] { opacity: .45; pointer-events: none; }
+.chip { font-family: var(--font-display); font-weight: 700; font-size: 15px; letter-spacing: .03em; padding: 1px 8px; border-radius: 3px; background: var(--panel-2); border: 1px solid var(--line); white-space: nowrap; }
+
+.list { display: flex; flex-direction: column; flex: 1; min-height: 260px; }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+.filters select, .filters input { background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 5px 6px; font-size: 13px; min-width: 0; }
+.filters input { flex: 1; min-width: 90px; }
+.rows { overflow-y: auto; flex: 1; max-height: 52vh; }
+@media (max-width: 980px) { .rows { max-height: none; } }
+.row { display: grid; grid-template-columns: 30px 6px minmax(0,1fr) auto; gap: 8px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); cursor: pointer; width: 100%; text-align: left; background: none; border-left: 0; border-right: 0; border-top: 0; }
+.row:hover { background: var(--panel-2); }
+.row.sel { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--accent); }
+.row .n { font-family: var(--font-display); font-weight: 700; font-size: 18px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.row .bar { width: 6px; align-self: stretch; border-radius: 2px; }
+.row .main { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.row .top { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.row .sub { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .gain { font-family: var(--font-display); font-weight: 700; font-size: 20px; font-variant-numeric: tabular-nums; text-align: right; }
+.gain.pos { color: var(--good); } .gain.neg { color: var(--bad); }
+.tag { font-size: 11px; padding: 1px 6px; border-radius: 3px; border: 1px solid var(--line); color: var(--muted); }
+.tag.ex { border-color: var(--accent); color: var(--accent); }
+.tag.draw { color: var(--fg); }
+.empty { padding: 24px 16px; color: var(--muted); text-align: center; }
+.stats { display: flex; gap: 14px; padding: 8px 12px; color: var(--muted); font-size: 12px; flex-wrap: wrap; border-top: 1px solid var(--line); }
+.stats b { color: var(--fg); font-family: var(--font-display); font-size: 15px; }
+
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: var(--r); font-weight: 500; z-index: 50; max-width: calc(100% - 32px); }
+.help { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: grid; place-items: center; z-index: 40; padding: 16px; }
+.help .card { max-width: 520px; width: 100%; }
+.help dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; padding: 14px; margin: 0; }
+.help dt { text-align: right; } .help dd { margin: 0; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<style>
+body { margin: 0; }
+[hidden] { display: none !important; }
+.stagebox #yt, .stagebox iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+canvas#draw { inset: 0; width: 100%; height: 100%; }
+.card .hd { flex-wrap: wrap; }
+.urlbar { display: flex; gap: 8px; flex: 1 1 340px; min-width: 0; max-width: 560px; }
+.urlbar input { flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--line); border-radius: var(--r); padding: 7px 10px; }
+.drop .urlbar { margin: 0 auto; }
+.note { font-size: 12px; color: var(--muted); }
+.warn { background: #3a1d12; border: 1px solid var(--accent); color: var(--fg); border-radius: var(--r); padding: 10px 12px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <h1>Sala de <span>Video</span></h1>
+      <div class="file" id="fileName">Sin video cargado</div>
+    </div>
+    <form class="urlbar" id="urlForm">
+      <input id="urlInput" type="url" placeholder="Pega el enlace de YouTube del partido" aria-label="Enlace de YouTube">
+      <button class="btn primary" type="submit">Cargar</button>
+    </form>
+    <div class="actions">
+      <label class="btn" for="importInput">Importar etiquetas</label>
+      <input type="file" id="importInput" accept=".json,application/json" hidden>
+      <button class="btn" id="exportJson">Exportar .json</button>
+      <button class="btn" id="exportCsv">Exportar .csv</button>
+      <button class="btn" id="shareBtn">Copiar enlace</button>
+      <button class="btn" id="helpBtn" aria-label="Atajos de teclado">Atajos <kbd>?</kbd></button>
+    </div>
+  </header>
+  <div class="warn" id="fileWarn" hidden>Esta página está abierta como archivo local y YouTube no permite reproducir videos así (error 153). Súbela a GitHub Pages u otro sitio web y ábrela desde ahí.</div>
+
+  <main>
+    <section class="left">
+      <div class="stagebox" id="stage">
+        <div id="yt"></div>
+        <canvas id="draw"></canvas>
+        <div class="hud" id="hud" hidden><span class="spd" id="hudSpd"></span></div>
+        <div class="drop" id="drop">
+          <div>
+            <strong>Carga el partido desde YouTube</strong>
+            <p>Pega el enlace de la transmisión de la liga (en vivo o ya terminada). El video se ve con el reproductor oficial de YouTube y aquí solo se guardan tus etiquetas.</p>
+            <form class="urlbar" id="urlForm2">
+              <input id="urlInput2" type="url" placeholder="https://www.youtube.com/watch?v=…" aria-label="Enlace de YouTube">
+              <button class="btn primary" type="submit">Cargar</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="timeline" id="timeline" role="slider" aria-label="Línea de tiempo" tabindex="0">
+        <div class="prog" id="prog"></div>
+        <div id="marks"></div>
+        <div class="head" id="head"></div>
+      </div>
+
+      <div class="transport">
+        <button class="btn" id="playBtn"><span id="playLbl">Reproducir</span> <kbd>Espacio</kbd></button>
+        <div class="group">
+          <button class="btn sm" id="back5" title="Atrás 5 s (Shift+←)">−5s</button>
+          <button class="btn sm" id="backF" title="Atrás 0.1 s (←)">◂ 0.1s</button>
+          <button class="btn sm" id="fwdF" title="Adelante 0.1 s (→)">0.1s ▸</button>
+          <button class="btn sm" id="fwd5" title="Adelante 5 s (Shift+→)">+5s</button>
+        </div>
+        <div class="group" id="speeds"></div>
+        <span class="tc" id="tc"><b>0:00.0</b> / 0:00.0</span>
+        <span class="spacer"></span>
+        <button class="btn sm" id="fsBtn">Pantalla completa</button>
+      </div>
+
+      <div class="drawbar">
+        <span class="lbl">Pizarrón</span>
+        <button class="btn sm" id="drawToggle">Dibujar <kbd>D</kbd></button>
+        <div class="group" id="tools"></div>
+        <div style="display:flex;gap:6px" id="colors"></div>
+        <button class="btn sm" id="undoBtn">Deshacer <kbd>Z</kbd></button>
+        <button class="btn sm" id="clearBtn">Borrar</button>
+        <span class="spacer"></span>
+        <button class="btn sm" id="saveDrawBtn" disabled>Guardar dibujo en jugada</button>
+      </div>
+      <div class="note">Tip: si haces clic dentro del video, YouTube toma el teclado. Haz clic fuera del video para volver a usar los atajos.</div>
+    </section>
+
+    <aside class="right">
+      <div class="card">
+        <div class="hd">
+          <h2>Jugada <span class="chip" id="selNum">—</span></h2>
+          <span class="spacer"></span>
+          <button class="btn sm primary" id="newBtn">+ Nueva <kbd>N</kbd></button>
+          <button class="btn sm" id="delBtn" disabled>Eliminar</button>
+        </div>
+        <div class="form" id="form" aria-disabled="true">
+          <div class="times">
+            <button class="btn sm" id="setIn">Inicio <kbd>I</kbd></button>
+            <span class="tc" id="inTc">—</span>
+            <button class="btn sm" id="setOut">Fin <kbd>O</kbd></button>
+            <span class="tc" id="outTc">—</span>
+            <span class="spacer"></span>
+            <button class="btn sm" id="clipBtn">Ver clip <kbd>C</kbd></button>
+          </div>
+          <div class="f"><label for="fQ">Cuarto</label><select id="fQ"><option>1</option><option>2</option><option>3</option><option>4</option><option value="TE">TE</option></select></div>
+          <div class="f" style="grid-column: span 3"><label for="fUnit">Unidad</label><select id="fUnit"><option value="O">Ofensiva</option><option value="D">Defensiva</option><option value="ST">Equipos especiales</option></select></div>
+          <div class="f"><label for="fDown">Down</label><select id="fDown"><option value="">—</option><option>1</option><option>2</option><option>3</option><option>4</option></select></div>
+          <div class="f"><label for="fDist">Yardas a avanzar</label><input id="fDist" type="number" min="0" max="99" inputmode="numeric"></div>
+          <div class="f"><label for="fSide">Campo</label><select id="fSide"><option value="P">Propio</option><option value="R">Rival</option></select></div>
+          <div class="f"><label for="fYard">Yarda</label><input id="fYard" type="number" min="1" max="50" inputmode="numeric"></div>
+          <div class="f"><label for="fHash">Hash</label><select id="fHash"><option value="">—</option><option value="I">Izq</option><option value="M">Medio</option><option value="D">Der</option></select></div>
+          <div class="f" style="grid-column: span 3"><label for="fForm">Formación</label><input id="fForm" list="formList" placeholder="Shotgun Trips Der"></div>
+          <div class="f c2"><label for="fType">Tipo de jugada</label><select id="fType"></select></div>
+          <div class="f c2"><label for="fRes">Resultado</label><select id="fRes"></select></div>
+          <div class="f"><label for="fGain">Yardas</label><input id="fGain" type="number" min="-99" max="109" inputmode="numeric"></div>
+          <div class="f" style="grid-column: span 3"><label for="fPlayer">Jugador(es)</label><input id="fPlayer" placeholder="#12, #24"></div>
+          <div class="f c4"><label for="fNotes">Notas para el equipo</label><textarea id="fNotes" placeholder="Qué corregir, qué repetir…"></textarea></div>
+        </div>
+      </div>
+
+      <div class="card list">
+        <div class="hd">
+          <h2>Jugadas <span class="chip" id="count">0</span></h2>
+          <span class="spacer"></span>
+          <button class="btn sm" id="loopBtn" title="Repetir el clip seleccionado">Repetir</button>
+          <button class="btn sm" id="chainBtn" title="Al terminar un clip, pasa a la siguiente jugada de la lista">Encadenar</button>
+        </div>
+        <div class="filters">
+          <select id="qUnit" aria-label="Filtrar unidad"><option value="">Todas las unidades</option><option value="O">Ofensiva</option><option value="D">Defensiva</option><option value="ST">Eq. especiales</option></select>
+          <select id="qDown" aria-label="Filtrar down"><option value="">Todo down</option><option>1</option><option>2</option><option>3</option><option>4</option></select>
+          <select id="qType" aria-label="Filtrar tipo"><option value="">Todo tipo</option></select>
+          <input id="qText" placeholder="Buscar formación, jugador, nota" aria-label="Buscar">
+        </div>
+        <div class="rows" id="rows"></div>
+        <div class="stats" id="stats"></div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<datalist id="formList"></datalist>
+<div class="help" id="help" hidden>
+  <div class="card">
+    <div class="hd"><h2>Atajos de teclado</h2><span class="spacer"></span><button class="btn sm" id="helpClose">Cerrar</button></div>
+    <dl>
+      <dt><kbd>Espacio</kbd></dt><dd>Reproducir / pausar</dd>
+      <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>0.1 segundos atrás / adelante</dd>
+      <dt><kbd>Shift</kbd>+<kbd>←</kbd> <kbd>→</kbd></dt><dd>5 segundos atrás / adelante</dd>
+      <dt><kbd>1</kbd>–<kbd>5</kbd></dt><dd>Velocidad 0.25× · 0.5× · 1× · 1.5× · 2×</dd>
+      <dt><kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Jugada anterior / siguiente</dd>
+      <dt><kbd>N</kbd></dt><dd>Nueva jugada en el momento actual</dd>
+      <dt><kbd>I</kbd> <kbd>O</kbd></dt><dd>Marcar inicio / fin de la jugada</dd>
+      <dt><kbd>C</kbd></dt><dd>Ver el clip de la jugada</dd>
+      <dt><kbd>D</kbd></dt><dd>Activar pizarrón · <kbd>Z</kbd> deshace el último trazo</dd>
+      <dt><kbd>F</kbd></dt><dd>Pantalla completa (para proyectar)</dd>
+    </dl>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const cv = $('draw'), ctx = cv.getContext('2d');
+const STEP = 0.1;
+const SPEEDS = [0.25, 0.5, 1, 1.5, 2];
+const TYPES = ['Carrera interior', 'Carrera exterior', 'Pase corto', 'Pase medio', 'Pase profundo', 'Play action', 'Pantalla', 'Opción / RPO', 'QB sneak', 'Despeje', 'Gol de campo', 'Patada inicial', 'Punto extra', 'Conversión 2 pts'];
+const RESULTS = ['', 'Ganancia', 'Primer down', 'Touchdown', 'Completo', 'Incompleto', 'Sin ganancia', 'Pérdida', 'Sack', 'Intercepción', 'Fumble', 'Castigo', 'Bueno', 'Fallado', 'Bloqueado'];
+const FORMS = ['Shotgun', 'Shotgun Trips Der', 'Shotgun Trips Izq', 'Pistol', 'I Formation', 'Singleback', 'Empty', 'Bajo centro', '4-3', '3-4', 'Nickel', 'Dime', 'Gol line'];
+const UNIT_COLOR = { O: 'var(--off)', D: 'var(--def)', ST: 'var(--st)' };
+const UNIT_NAME = { O: 'Ofensiva', D: 'Defensiva', ST: 'Eq. esp.' };
+const COLORS = ['#ffd400', '#ff4040', '#ffffff', '#33d6ff'];
+const TOOLS = [['arrow', 'Flecha'], ['line', 'Línea'], ['circle', 'Círculo'], ['pen', 'Libre']];
+
+const S = {
+  plays: [], sel: null, key: null, example: true, vid: null,
+  clip: false, loop: false, chain: false, keepDrawUntil: 0,
+  draw: false, tool: 'arrow', color: COLORS[0], strokes: [], cur: null, rate: 1,
+};
+
+if (location.protocol === 'file:') $('fileWarn').hidden = false;
+
+S.plays = [
+  { id: 'e1', start: 12, end: 20, q: '1', unit: 'O', down: '1', dist: 10, side: 'P', yard: 25, hash: 'M', form: 'Shotgun Trips Der', type: 'Carrera interior', res: 'Ganancia', gain: 4, player: '#24', notes: 'Buen bloqueo del guardia izquierdo.', ex: true },
+  { id: 'e2', start: 41, end: 49, q: '1', unit: 'O', down: '2', dist: 6, side: 'P', yard: 29, hash: 'D', form: 'Pistol', type: 'Play action', res: 'Primer down', gain: 18, player: '#12, #81', notes: 'El safety mordió la finta.', ex: true },
+  { id: 'e3', start: 77, end: 84, q: '1', unit: 'D', down: '3', dist: 7, side: 'R', yard: 38, hash: 'I', form: 'Nickel', type: 'Pase corto', res: 'Sack', gain: -6, player: '#55', notes: 'Blitz por el lado débil.', ex: true },
+];
+
+// ---------- YouTube player wrapper ----------
+let yt = null, ready = false, apiReady = false, pendingId = null;
+const P = {
+  get t() { try { return ready ? yt.getCurrentTime() || 0 : 0; } catch (e) { return 0; } },
+  get d() { try { return ready ? yt.getDuration() || 0 : 0; } catch (e) { return 0; } },
+  get paused() { try { return !ready || yt.getPlayerState() !== 1; } catch (e) { return true; } },
+  get ok() { return ready; },
+  play() { if (ready) yt.playVideo(); },
+  pause() { if (ready) yt.pauseVideo(); },
+  seek(t) { if (!ready) return; const d = this.d; t = Math.max(0, d ? Math.min(d - 0.05, t) : t); yt.seekTo(t, true); },
+  rate(r) { if (ready) yt.setPlaybackRate(r); },
+};
+window.onYouTubeIframeAPIReady = () => { apiReady = true; if (pendingId && !yt) createPlayer(pendingId); };
+function createPlayer(id) {
+  const vars = { rel: 0, playsinline: 1, modestbranding: 1 };
+  if (location.protocol.startsWith('http')) vars.origin = location.origin;
+  yt = new YT.Player('yt', {
+    videoId: id, playerVars: vars,
+    events: {
+      onReady: () => { ready = true; P.rate(S.rate); renderAll(); },
+      onStateChange: e => {
+        updPlay();
+        if (e.data === 1 && Date.now() > S.keepDrawUntil) { if (S.strokes.length) { S.strokes = []; redraw(); } if (S.draw) setDraw(false); }
+        if (e.data === 1) P.rate(S.rate);
+      },
+      onError: e => {
+        const msg = { 2: 'El enlace no es válido.', 5: 'El video no se puede reproducir aquí.', 100: 'El video no existe o es privado.', 101: 'El dueño del video no permite verlo fuera de YouTube.', 150: 'El dueño del video no permite verlo fuera de YouTube.', 153: 'Abre esta página desde un sitio web (no como archivo local).' }[e.data];
+        toast(msg || 'YouTube no pudo cargar el video.');
+      },
+    },
+  });
+}
+function parseId(u) {
+  u = (u || '').trim();
+  if (/^[\w-]{11}$/.test(u)) return u;
+  try {
+    const url = new URL(u);
+    if (url.hostname.includes('youtu.be')) return url.pathname.slice(1, 12);
+    if (url.searchParams.get('v')) return url.searchParams.get('v').slice(0, 11);
+    const m = url.pathname.match(/\/(live|embed|shorts|v)\/([\w-]{11})/);
+    if (m) return m[2];
+  } catch (e) {}
+  return null;
+}
+function loadUrl(u) {
+  const id = parseId(u);
+  if (!id) { toast('No reconozco ese enlace. Copia el enlace completo del video de YouTube.'); return; }
+  S.vid = id;
+  $('drop').hidden = true; $('hud').hidden = false;
+  $('fileName').textContent = 'YouTube · ' + id;
+  $('urlInput').value = 'https://www.youtube.com/watch?v=' + id;
+  S.key = 'salavideo-yt:' + id;
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(S.key) || 'null'); localStorage.setItem('salavideo-yt:last', id); } catch (e) {}
+  S.plays = Array.isArray(saved) ? saved : [];
+  S.example = false; S.sel = null; S.strokes = []; S.clip = false;
+  try { history.replaceState(null, '', location.pathname + '?v=' + id); } catch (e) {}
+  if (yt && ready) yt.cueVideoById(id);
+  else if (apiReady) { if (!yt) createPlayer(id); }
+  else pendingId = id;
+  renderAll();
+  if (saved && saved.length) toast(`Se recuperaron ${saved.length} jugadas de este video.`);
+}
+$('urlForm').onsubmit = e => { e.preventDefault(); loadUrl($('urlInput').value); };
+$('urlForm2').onsubmit = e => { e.preventDefault(); loadUrl($('urlInput2').value); };
+$('shareBtn').onclick = async () => {
+  if (!S.vid) return toast('Primero carga un video.');
+  const link = location.origin + location.pathname + '?v=' + S.vid;
+  try { await navigator.clipboard.writeText(link); toast('Enlace copiado. Las etiquetas se comparten aparte con «Exportar .json».'); }
+  catch (e) { toast(link); }
+};
+
+// ---------- helpers ----------
+const fmt = t => { if (!isFinite(t)) t = 0; const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + s.toFixed(1).padStart(4, '0'); };
+const uid = () => Math.random().toString(36).slice(2, 9);
+const sorted = () => [...S.plays].sort((a, b) => a.start - b.start);
+const selPlay = () => S.plays.find(p => p.id === S.sel) || null;
+const numOf = p => sorted().indexOf(p) + 1;
+let toastT;
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3200); }
+function ddText(p) { return p.down ? `${p.down}ª y ${p.dist ?? '?'}` : '—'; }
+function posText(p) { if (!p.yard) return ''; return p.yard >= 50 ? '50' : (p.side === 'P' ? 'P' : 'R') + p.yard; }
+function save() { if (!S.key) return; try { localStorage.setItem(S.key, JSON.stringify(S.plays)); } catch (e) {} }
+
+// ---------- static controls ----------
+SPEEDS.forEach((s, i) => { const b = document.createElement('button'); b.className = 'btn sm'; b.textContent = s + '×'; b.dataset.s = s; b.title = 'Tecla ' + (i + 1); b.onclick = () => setSpeed(s); $('speeds').append(b); });
+TOOLS.forEach(([k, n]) => { const b = document.createElement('button'); b.className = 'btn sm'; b.textContent = n; b.dataset.t = k; b.onclick = () => { S.tool = k; setDraw(true); paintTools(); }; $('tools').append(b); });
+COLORS.forEach(c => { const b = document.createElement('button'); b.className = 'sw'; b.style.background = c; b.dataset.c = c; b.setAttribute('aria-label', 'Color ' + c); b.onclick = () => { S.color = c; setDraw(true); paintTools(); }; $('colors').append(b); });
+TYPES.forEach(t => { $('fType').add(new Option(t, t)); $('qType').add(new Option(t, t)); });
+$('fType').insertBefore(new Option('—', ''), $('fType').firstChild);
+RESULTS.forEach(r => $('fRes').add(new Option(r || '—', r)));
+FORMS.forEach(f => { const o = document.createElement('option'); o.value = f; $('formList').append(o); });
+
+function paintTools() {
+  [...$('tools').children].forEach(b => b.classList.toggle('on', S.draw && b.dataset.t === S.tool));
+  [...$('colors').children].forEach(b => b.classList.toggle('on', b.dataset.c === S.color));
+  $('drawToggle').classList.toggle('on', S.draw);
+  cv.classList.toggle('active', S.draw);
+  cv.style.pointerEvents = S.draw ? 'auto' : 'none';
+  $('saveDrawBtn').disabled = !(selPlay() && S.strokes.length);
+}
+function setSpeed(s) {
+  S.rate = s; P.rate(s);
+  [...$('speeds').children].forEach(b => b.classList.toggle('on', +b.dataset.s === s));
+  $('hudSpd').textContent = s + '×';
+  $('hudSpd').hidden = s === 1;
+}
+setSpeed(1);
+
+// ---------- canvas ----------
+const stage = $('stage');
+function layoutCanvas() {
+  const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+  redraw();
+}
+new ResizeObserver(layoutCanvas).observe(stage);
+
+function redraw() {
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  const all = S.cur ? [...S.strokes, S.cur] : S.strokes;
+  const W = cv.width, H = cv.height, lw = Math.max(3, W / 260);
+  for (const s of all) {
+    ctx.strokeStyle = s.color; ctx.fillStyle = s.color; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = lw;
+    const Pt = s.pts.map(([x, y]) => [x * W, y * H]);
+    if (!Pt.length) continue;
+    const [x0, y0] = Pt[0], [x1, y1] = Pt[Pt.length - 1];
+    ctx.beginPath();
+    if (s.type === 'pen') { Pt.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); }
+    else if (s.type === 'circle') { ctx.ellipse((x0 + x1) / 2, (y0 + y1) / 2, Math.abs(x1 - x0) / 2, Math.abs(y1 - y0) / 2, 0, 0, Math.PI * 2); ctx.stroke(); }
+    else {
+      ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+      if (s.type === 'arrow' && Math.hypot(x1 - x0, y1 - y0) > 4) {
+        const ang = Math.atan2(y1 - y0, x1 - x0), L = lw * 5;
+        ctx.beginPath(); ctx.moveTo(x1, y1);
+        ctx.lineTo(x1 - L * Math.cos(ang - 0.45), y1 - L * Math.sin(ang - 0.45));
+        ctx.lineTo(x1 - L * Math.cos(ang + 0.45), y1 - L * Math.sin(ang + 0.45));
+        ctx.closePath(); ctx.fill();
+      }
+    }
+  }
+  ctx.shadowBlur = 0;
+}
+function ptOf(e) { const r = cv.getBoundingClientRect(); return [Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))]; }
+cv.addEventListener('pointerdown', e => {
+  if (!S.draw) return;
+  P.pause(); S.clip = false;
+  cv.setPointerCapture(e.pointerId);
+  const p = ptOf(e); S.cur = { type: S.tool, color: S.color, pts: [p, p] }; redraw();
+});
+cv.addEventListener('pointermove', e => { if (!S.cur) return; const p = ptOf(e); if (S.cur.type === 'pen') S.cur.pts.push(p); else S.cur.pts[1] = p; redraw(); });
+const endStroke = () => { if (!S.cur) return; S.strokes.push(S.cur); S.cur = null; redraw(); paintTools(); };
+cv.addEventListener('pointerup', endStroke); cv.addEventListener('pointercancel', endStroke);
+function setDraw(on) { S.draw = on; if (on) P.pause(); paintTools(); }
+$('drawToggle').onclick = () => setDraw(!S.draw);
+$('undoBtn').onclick = () => { S.strokes.pop(); redraw(); paintTools(); };
+$('clearBtn').onclick = () => { S.strokes = []; redraw(); paintTools(); };
+$('saveDrawBtn').onclick = () => {
+  const p = selPlay(); if (!p || !S.strokes.length) return;
+  p.drawing = { t: P.t, strokes: JSON.parse(JSON.stringify(S.strokes)) };
+  save(); renderList(); toast(`Dibujo guardado en la jugada ${numOf(p)} (${fmt(P.t)}).`);
+};
+
+// ---------- transport ----------
+function togglePlay() { if (!P.ok) return; P.paused ? P.play() : P.pause(); }
+function step(dt) { P.pause(); P.seek(P.t + dt); }
+$('playBtn').onclick = togglePlay;
+$('back5').onclick = () => { S.clip = false; P.seek(P.t - 5); };
+$('fwd5').onclick = () => { S.clip = false; P.seek(P.t + 5); };
+$('backF').onclick = () => step(-STEP);
+$('fwdF').onclick = () => step(STEP);
+function updPlay() { $('playLbl').textContent = P.paused ? 'Reproducir' : 'Pausa'; }
+updPlay();
+function fsToggle() {
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  else if (stage.requestFullscreen) stage.requestFullscreen().catch(() => toast('Pantalla completa no está disponible aquí.'));
+}
+$('fsBtn').onclick = fsToggle;
+
+let lastDur = 0;
+function tick() {
+  const p = selPlay();
+  if (S.clip && p && !P.paused && P.t >= p.end) {
+    if (S.loop) P.seek(p.start);
+    else if (S.chain) {
+      const list = filtered(), i = list.indexOf(p);
+      if (i >= 0 && i < list.length - 1) playClip(list[i + 1]); else { P.pause(); S.clip = false; }
+    } else { P.pause(); S.clip = false; }
+  }
+  renderHead();
+  const d = P.d; if (Math.abs(d - lastDur) > 5) { lastDur = d; renderTimeline(); }
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+function playClip(p) {
+  if (!p) return;
+  select(p.id);
+  if (!P.ok) return;
+  S.clip = true; P.seek(p.start); P.play();
+}
+
+// ---------- timeline ----------
+const tl = $('timeline');
+function renderHead() {
+  const d = P.d, t = P.t, pct = d ? (t / d) * 100 : 0;
+  $('prog').style.width = pct + '%'; $('head').style.left = `calc(${pct}% - 1px)`;
+  $('tc').innerHTML = `<b>${fmt(t)}</b> / ${fmt(d)}`;
+}
+function renderTimeline() {
+  const d = P.d || (S.example ? 120 : 0), m = $('marks'); m.innerHTML = '';
+  if (!d) return;
+  for (const p of S.plays) {
+    const el = document.createElement('div'); el.className = 'mk' + (p.id === S.sel ? ' sel' : '');
+    el.style.left = (p.start / d * 100) + '%'; el.style.width = (Math.max(0, p.end - p.start) / d * 100) + '%';
+    el.style.background = UNIT_COLOR[p.unit] || 'var(--muted)';
+    m.append(el);
+  }
+}
+let scrubbing = false;
+function tlSeek(e) { const r = tl.getBoundingClientRect(); S.clip = false; P.seek(((e.clientX - r.left) / r.width) * P.d); }
+tl.addEventListener('pointerdown', e => { if (!P.ok) return; scrubbing = true; tl.setPointerCapture(e.pointerId); tlSeek(e); });
+tl.addEventListener('pointermove', e => { if (scrubbing) tlSeek(e); });
+tl.addEventListener('pointerup', () => scrubbing = false);
+
+// ---------- plays ----------
+function hasNum(x) { return x !== '' && x != null && isFinite(Number(x)); }
+function nextSituation(prev) {
+  const n = { q: prev.q, unit: prev.unit, side: prev.side, yard: prev.yard, hash: '', down: '', dist: '' };
+  const g = Number(prev.gain);
+  if (prev.yard && hasNum(prev.gain)) {
+    let abs = prev.side === 'P' ? prev.yard : 100 - prev.yard; abs = Math.max(1, Math.min(99, abs + g));
+    n.side = abs <= 50 ? 'P' : 'R'; n.yard = abs <= 50 ? abs : 100 - abs;
+  }
+  if (prev.down && hasNum(prev.dist) && hasNum(prev.gain) && !/Touchdown|Intercepción|Fumble/.test(prev.res || '')) {
+    if (g >= prev.dist) { n.down = '1'; n.dist = 10; }
+    else if (+prev.down < 4) { n.down = String(+prev.down + 1); n.dist = prev.dist - g; }
+  }
+  return n;
+}
+function newPlay() {
+  if (S.example) { S.plays = []; S.example = false; }
+  const t = P.t, d = P.d;
+  const before = sorted().filter(p => p.start <= t).pop();
+  const base = before ? nextSituation(before) : { q: '1', unit: 'O', down: '1', dist: 10, side: 'P', yard: 25, hash: '' };
+  const p = { id: uid(), start: t, end: d ? Math.min(d, t + 8) : t + 8, form: '', type: '', res: '', gain: '', player: '', notes: '', ...base };
+  S.plays.push(p); save(); select(p.id);
+  $('fForm').focus();
+}
+function select(id) {
+  S.sel = id; renderAll();
+  const p = selPlay();
+  if (p) { const row = document.querySelector(`.row[data-id="${p.id}"]`); row && row.scrollIntoView({ block: 'nearest' }); }
+}
+function moveSel(dir) {
+  const list = filtered(); if (!list.length) return;
+  const i = list.findIndex(p => p.id === S.sel);
+  playClip(list[Math.max(0, Math.min(list.length - 1, i < 0 ? 0 : i + dir))]);
+}
+$('newBtn').onclick = newPlay;
+let delArm = false, delT;
+$('delBtn').onclick = () => {
+  const p = selPlay(); if (!p) return;
+  if (!delArm) { delArm = true; $('delBtn').textContent = '¿Seguro?'; clearTimeout(delT); delT = setTimeout(() => { delArm = false; $('delBtn').textContent = 'Eliminar'; }, 2500); return; }
+  delArm = false; $('delBtn').textContent = 'Eliminar';
+  S.plays = S.plays.filter(x => x !== p); S.sel = null; save(); renderAll(); toast('Jugada eliminada.');
+};
+$('setIn').onclick = () => { const p = selPlay(); if (!p || !P.ok) return; p.start = P.t; if (p.end < p.start) p.end = p.start + 6; save(); renderAll(); };
+$('setOut').onclick = () => { const p = selPlay(); if (!p || !P.ok) return; p.end = Math.max(p.start + 0.5, P.t); save(); renderAll(); };
+$('clipBtn').onclick = () => playClip(selPlay());
+$('loopBtn').onclick = () => { S.loop = !S.loop; if (S.loop) S.chain = false; paintModes(); };
+$('chainBtn').onclick = () => { S.chain = !S.chain; if (S.chain) S.loop = false; paintModes(); };
+function paintModes() { $('loopBtn').classList.toggle('on', S.loop); $('chainBtn').classList.toggle('on', S.chain); }
+
+const FIELDS = { fQ: 'q', fUnit: 'unit', fDown: 'down', fDist: 'dist', fSide: 'side', fYard: 'yard', fHash: 'hash', fForm: 'form', fType: 'type', fRes: 'res', fGain: 'gain', fPlayer: 'player', fNotes: 'notes' };
+const NUMERIC = new Set(['dist', 'yard', 'gain']);
+Object.entries(FIELDS).forEach(([id, k]) => {
+  $(id).addEventListener('input', () => {
+    const p = selPlay(); if (!p) return;
+    const raw = $(id).value; p[k] = NUMERIC.has(k) ? (raw === '' ? '' : Number(raw)) : raw;
+    if (p.ex) delete p.ex;
+    save(); renderList(); renderTimeline(); renderSelHead();
+  });
+});
+function renderSelHead() { const p = selPlay(); $('selNum').textContent = p ? `${numOf(p)} · ${ddText(p)}${posText(p) ? ' · ' + posText(p) : ''}` : '—'; }
+function renderForm() {
+  const p = selPlay();
+  $('form').setAttribute('aria-disabled', p ? 'false' : 'true');
+  $('delBtn').disabled = !p;
+  Object.entries(FIELDS).forEach(([id, k]) => { const el = $(id); if (document.activeElement !== el) el.value = p ? (p[k] ?? '') : ''; });
+  $('inTc').textContent = p ? fmt(p.start) : '—';
+  $('outTc').textContent = p ? fmt(p.end) : '—';
+  renderSelHead();
+}
+
+function filtered() {
+  const u = $('qUnit').value, d = $('qDown').value, t = $('qType').value, q = $('qText').value.trim().toLowerCase();
+  return sorted().filter(p => (!u || p.unit === u) && (!d || p.down === d) && (!t || p.type === t) &&
+    (!q || [p.form, p.player, p.notes, p.res, p.type].join(' ').toLowerCase().includes(q)));
+}
+['qUnit', 'qDown', 'qType'].forEach(id => $(id).onchange = renderList);
+$('qText').oninput = renderList;
+function esc(s) { return String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function renderList() {
+  const all = sorted(), list = filtered(), rows = $('rows');
+  $('count').textContent = list.length === all.length ? all.length : `${list.length}/${all.length}`;
+  if (!all.length) rows.innerHTML = `<div class="empty">Aún no hay jugadas. Pausa en el snap y presiona <kbd>N</kbd> para etiquetar la primera.</div>`;
+  else if (!list.length) rows.innerHTML = `<div class="empty">Ninguna jugada coincide con los filtros.</div>`;
+  else rows.innerHTML = list.map(p => {
+    const g = hasNum(p.gain) ? Number(p.gain) : '';
+    const gCls = g === '' ? '' : g > 0 ? 'pos' : g < 0 ? 'neg' : '';
+    const sub = [p.form, p.player, p.notes].filter(Boolean).join(' · ');
+    return `<button class="row${p.id === S.sel ? ' sel' : ''}" data-id="${p.id}">
+      <span class="n">${all.indexOf(p) + 1}</span>
+      <span class="bar" style="background:${UNIT_COLOR[p.unit] || 'var(--muted)'}"></span>
+      <span class="main">
+        <span class="top"><span class="chip">${esc(ddText(p))}</span>${posText(p) ? `<span class="tag">${esc(posText(p))}</span>` : ''}<span>${esc(p.type || 'Sin tipo')}</span>${p.res ? `<span class="tag">${esc(p.res)}</span>` : ''}${p.drawing ? '<span class="tag draw">✎ dibujo</span>' : ''}${p.ex ? '<span class="tag ex">Ejemplo</span>' : ''}</span>
+        <span class="sub">${esc(UNIT_NAME[p.unit] || '')} · C${esc(p.q)} · ${fmt(p.start)}${sub ? ' · ' + esc(sub) : ''}</span>
+      </span>
+      <span class="gain ${gCls}">${g === '' ? '' : (g > 0 ? '+' : '') + g}</span>
+    </button>`;
+  }).join('');
+  const withGain = list.filter(p => hasNum(p.gain) && /Carrera|Pase|Play action|Pantalla|Opción|sneak/.test(p.type || ''));
+  const yds = withGain.reduce((a, p) => a + Number(p.gain), 0);
+  const runs = withGain.filter(p => /Carrera|sneak/.test(p.type)), passes = withGain.filter(p => !/Carrera|sneak/.test(p.type));
+  const avg = arr => arr.length ? (arr.reduce((a, p) => a + Number(p.gain), 0) / arr.length).toFixed(1) : '—';
+  const third = list.filter(p => p.down === '3'), conv = third.filter(p => /Primer down|Touchdown/.test(p.res || '') || (hasNum(p.gain) && hasNum(p.dist) && Number(p.gain) >= Number(p.dist)));
+  $('stats').innerHTML = `<span>Yardas <b>${yds}</b></span><span>Prom. carrera <b>${avg(runs)}</b></span><span>Prom. pase <b>${avg(passes)}</b></span><span>3er down <b>${conv.length}/${third.length}</b></span>`;
+  paintTools();
+}
+$('rows').addEventListener('click', e => {
+  const r = e.target.closest('.row'); if (!r) return;
+  const p = S.plays.find(x => x.id === r.dataset.id);
+  if (p && p.drawing && P.ok) {
+    select(p.id); S.clip = false;
+    S.keepDrawUntil = Date.now() + 2500;
+    P.seek(p.drawing.t);
+    setTimeout(() => { P.pause(); S.strokes = JSON.parse(JSON.stringify(p.drawing.strokes)); redraw(); paintTools(); }, 900);
+    toast('Telestración de la jugada. Presiona C para ver el clip completo.');
+  } else playClip(p);
+});
+function renderAll() { renderForm(); renderList(); renderTimeline(); renderHead(); paintTools(); }
+
+// ---------- import / export ----------
+$('importInput').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    const plays = Array.isArray(data) ? data : data.plays;
+    if (!Array.isArray(plays)) throw new Error();
+    if (data.youtube && data.youtube !== S.vid) loadUrl(data.youtube);
+    S.plays = plays.map(p => ({ ...p, id: p.id || uid() })); S.example = false; S.sel = null;
+    save(); renderAll();
+    toast(`Se importaron ${plays.length} jugadas.`);
+  } catch (err) { toast('No se pudo leer el archivo. Usa un .json exportado desde Sala de Video.'); }
+};
+function download(filename, text, type) {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = document.createElement('a'); a.href = url; a.download = filename; document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+const baseName = () => 'partido-' + (S.vid || 'sin-video');
+$('exportJson').onclick = () => {
+  if (!S.plays.length) return toast('No hay jugadas para exportar.');
+  download(baseName() + '-etiquetas.json', JSON.stringify({ app: 'Sala de Video', version: 1, youtube: S.vid, exported: new Date().toISOString(), plays: sorted() }, null, 2), 'application/json');
+};
+$('exportCsv').onclick = () => {
+  if (!S.plays.length) return toast('No hay jugadas para exportar.');
+  const cols = [['#', (p, i) => i + 1], ['Inicio', p => fmt(p.start)], ['Fin', p => fmt(p.end)], ['Enlace', p => S.vid ? `https://youtu.be/${S.vid}?t=${Math.floor(p.start)}` : ''], ['Cuarto', p => p.q], ['Unidad', p => UNIT_NAME[p.unit]], ['Down', p => p.down], ['Yardas a avanzar', p => p.dist], ['Posición', p => posText(p)], ['Hash', p => p.hash], ['Formación', p => p.form], ['Tipo', p => p.type], ['Resultado', p => p.res], ['Yardas', p => p.gain], ['Jugadores', p => p.player], ['Notas', p => p.notes]];
+  const q = s => { s = String(s ?? ''); return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  download(baseName() + '-jugadas.csv', '﻿' + [cols.map(c => c[0]).join(','), ...sorted().map((p, i) => cols.map(c => q(c[1](p, i))).join(','))].join('\n'), 'text/csv');
+};
+
+// ---------- help & keyboard ----------
+$('helpBtn').onclick = () => $('help').hidden = false;
+$('helpClose').onclick = () => $('help').hidden = true;
+$('help').onclick = e => { if (e.target === $('help')) $('help').hidden = true; };
+document.addEventListener('keydown', e => {
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (e.key === 'Escape') { $('help').hidden = true; if (['input', 'textarea', 'select'].includes(tag)) e.target.blur(); if (S.draw) setDraw(false); return; }
+  if (['input', 'textarea', 'select'].includes(tag) || e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key;
+  if (k === ' ') { e.preventDefault(); togglePlay(); }
+  else if (k === 'ArrowLeft') { e.preventDefault(); if (e.shiftKey) { S.clip = false; P.seek(P.t - 5); } else step(-STEP); }
+  else if (k === 'ArrowRight') { e.preventDefault(); if (e.shiftKey) { S.clip = false; P.seek(P.t + 5); } else step(STEP); }
+  else if (k === 'ArrowUp') { e.preventDefault(); moveSel(-1); }
+  else if (k === 'ArrowDown') { e.preventDefault(); moveSel(1); }
+  else if (k >= '1' && k <= '5') setSpeed(SPEEDS[+k - 1]);
+  else if (k === 'n' || k === 'N') { e.preventDefault(); newPlay(); }
+  else if (k === 'i' || k === 'I') $('setIn').click();
+  else if (k === 'o' || k === 'O') $('setOut').click();
+  else if (k === 'c' || k === 'C') playClip(selPlay());
+  else if (k === 'd' || k === 'D') setDraw(!S.draw);
+  else if (k === 'z' || k === 'Z') $('undoBtn').click();
+  else if (k === 'f' || k === 'F') fsToggle();
+  else if (k === '?') $('help').hidden = !$('help').hidden;
+});
+
+S.sel = 'e2';
+paintModes(); renderAll();
+// open from ?v=ID or the last video used
+const qv = new URLSearchParams(location.search).get('v');
+let last = null; try { last = localStorage.getItem('salavideo-yt:last'); } catch (e) {}
+if (qv) loadUrl(qv); else if (last) $('urlInput2').value = 'https://www.youtube.com/watch?v=' + last;
+if (window.YT && YT.Player) window.onYouTubeIframeAPIReady();
+})();
+</script>
+</body>
+</html>
