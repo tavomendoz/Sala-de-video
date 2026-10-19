@@ -156,6 +156,15 @@ canvas#draw { inset: 0; width: 100%; height: 100%; }
 .urlbar input { flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--line); border-radius: var(--r); padding: 7px 10px; }
 .drop .urlbar { margin: 0 auto; }
 .note { font-size: 12px; color: var(--muted); }
+.cloudbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: 100%; }
+.cloudbar select { background: var(--bg); border: 1px solid var(--line); border-radius: var(--r); padding: 6px 8px; max-width: 100%; min-width: 0; flex: 0 1 380px; }
+.status { font-size: 12px; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.status.ok { color: var(--good); border-color: var(--good); }
+.status.bad { color: var(--bad); border-color: var(--bad); }
+.status.busy { color: var(--accent); border-color: var(--accent); }
+.keyform { display: flex; gap: 6px; }
+.keyform input { background: var(--bg); border: 1px solid var(--line); border-radius: var(--r); padding: 5px 8px; width: 150px; min-width: 0; }
+.who { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 28ch; }
 .warn { background: #3a1d12; border: 1px solid var(--accent); color: var(--fg); border-radius: var(--r); padding: 10px 12px; }
 </style>
 </head>
@@ -177,6 +186,14 @@ canvas#draw { inset: 0; width: 100%; height: 100%; }
       <button class="btn" id="exportCsv">Exportar .csv</button>
       <button class="btn" id="shareBtn">Copiar enlace</button>
       <button class="btn" id="helpBtn" aria-label="Atajos de teclado">Atajos <kbd>?</kbd></button>
+    </div>
+    <div class="cloudbar">
+      <select id="gamesSel" aria-label="Partidos guardados" hidden><option value="">Partidos guardados…</option></select>
+      <span class="status" id="status">Solo en este navegador</span>
+      <span class="spacer" style="flex:1"></span>
+      <span class="who" id="who"></span>
+      <button class="btn sm" id="loginBtn" hidden>Entrar como coach</button>
+      <form class="keyform" id="keyForm" hidden><input id="keyInput" type="password" placeholder="Clave de coach" autocomplete="current-password" aria-label="Clave de coach"><button class="btn sm primary" type="submit">Entrar</button></form>
     </div>
   </header>
   <div class="warn" id="fileWarn" hidden>Esta página está abierta como archivo local y YouTube no permite reproducir videos así (error 153). Súbela a GitHub Pages u otro sitio web y ábrela desde ahí.</div>
@@ -353,11 +370,11 @@ function createPlayer(id) {
   yt = new YT.Player('yt', {
     videoId: id, playerVars: vars,
     events: {
-      onReady: () => { ready = true; P.rate(S.rate); renderAll(); },
+      onReady: () => { ready = true; P.rate(S.rate); grabTitle(); renderAll(); },
       onStateChange: e => {
         updPlay();
         if (e.data === 1 && Date.now() > S.keepDrawUntil) { if (S.strokes.length) { S.strokes = []; redraw(); } if (S.draw) setDraw(false); }
-        if (e.data === 1) P.rate(S.rate);
+        if (e.data === 1) { P.rate(S.rate); grabTitle(); }
       },
       onError: e => {
         const msg = { 2: 'El enlace no es válido.', 5: 'El video no se puede reproducir aquí.', 100: 'El video no existe o es privado.', 101: 'El dueño del video no permite verlo fuera de YouTube.', 150: 'El dueño del video no permite verlo fuera de YouTube.', 153: 'Abre esta página desde un sitio web (no como archivo local).' }[e.data];
@@ -366,6 +383,7 @@ function createPlayer(id) {
     },
   });
 }
+function grabTitle() { try { const d = yt.getVideoData(); if (d && d.title) { const was = S.title; S.title = d.title; $('fileName').textContent = d.title; if (!was && cloud.on && cloud.ok && S.plays.length) { cloud.lastTouch = 0; touchVideo(); } } } catch (e) {} }
 function parseId(u) {
   u = (u || '').trim();
   if (/^[\w-]{11}$/.test(u)) return u;
@@ -389,13 +407,15 @@ function loadUrl(u) {
   let saved = null;
   try { saved = JSON.parse(localStorage.getItem(S.key) || 'null'); localStorage.setItem('salavideo-yt:last', id); } catch (e) {}
   S.plays = Array.isArray(saved) ? saved : [];
-  S.example = false; S.sel = null; S.strokes = []; S.clip = false;
+  S.example = false; S.sel = null; S.strokes = []; S.clip = false; S.title = '';
+  dirty.clear(); timers.forEach(clearTimeout); timers.clear();
   try { history.replaceState(null, '', location.pathname + '?v=' + id); } catch (e) {}
+  if (cloud.on) { subscribe(id); const gs = $('gamesSel'); if ([...gs.options].some(o => o.value === id)) gs.value = id; }
   if (yt && ready) yt.cueVideoById(id);
   else if (apiReady) { if (!yt) createPlayer(id); }
   else pendingId = id;
   renderAll();
-  if (saved && saved.length) toast(`Se recuperaron ${saved.length} jugadas de este video.`);
+  if (!cloud.on && saved && saved.length) toast(`Se recuperaron ${saved.length} jugadas de este video.`);
 }
 $('urlForm').onsubmit = e => { e.preventDefault(); loadUrl($('urlInput').value); };
 $('urlForm2').onsubmit = e => { e.preventDefault(); loadUrl($('urlInput2').value); };
@@ -416,7 +436,151 @@ let toastT;
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3200); }
 function ddText(p) { return p.down ? `${p.down}ª y ${p.dist ?? '?'}` : '—'; }
 function posText(p) { if (!p.yard) return ''; return p.yard >= 50 ? '50' : (p.side === 'P' ? 'P' : 'R') + p.yard; }
-function save() { if (!S.key) return; try { localStorage.setItem(S.key, JSON.stringify(S.plays)); } catch (e) {} }
+function cacheLocal() { if (!S.key) return; try { localStorage.setItem(S.key, JSON.stringify(S.plays)); } catch (e) {} }
+
+// ---------- cloud (Cloudflare D1 vía /api) ----------
+const cloud = { on: false, ok: false, key: '', poll: null, games: null, lastTouch: 0, unloading: false };
+const dirty = new Map(), timers = new Map(), deleted = new Map();
+function canEdit() { return !cloud.on || cloud.ok; }
+function setStatus(text, kind) { const s = $('status'); s.textContent = text; s.className = 'status' + (kind ? ' ' + kind : ''); }
+function needEdit() {
+  if (canEdit()) return true;
+  toast('Escribe la clave de coach para editar (botón «Entrar como coach»).');
+  return false;
+}
+async function api(path, opts = {}) {
+  const headers = { 'content-type': 'application/json' };
+  if (cloud.key) headers['x-coach-key'] = cloud.key;
+  const res = await fetch('/api/' + path, { ...opts, headers, keepalive: !!cloud.unloading });
+  let body = null; try { body = await res.json(); } catch (e) {}
+  if (!res.ok) { const err = new Error((body && body.error) || ('http_' + res.status)); err.status = res.status; throw err; }
+  return body;
+}
+function cleanPlay(p) { const o = JSON.parse(JSON.stringify(p)); delete o.id; delete o.ex; return o; }
+function lostKey() {
+  cloud.ok = false; cloud.key = '';
+  try { localStorage.removeItem('salavideo:coachkey'); } catch (e) {}
+  paintAuth(); renderAll();
+  toast('La clave de coach ya no es válida. Vuelve a entrar.');
+}
+function cloudError(e) {
+  if (e && e.status === 401) { lostKey(); setStatus('No se guardó', 'bad'); return; }
+  setStatus('No se guardó · reintenta', 'bad');
+  toast(e && e.status === 413 ? 'El dibujo es demasiado grande para guardarse.' : 'No se pudo guardar en la nube. Revisa tu conexión.');
+}
+function touchVideo() {
+  if (!cloud.on || !cloud.ok || !S.vid || !S.title || Date.now() - cloud.lastTouch < 20000) return;
+  cloud.lastTouch = Date.now();
+  api('videos', { method: 'POST', body: JSON.stringify({ id: S.vid, title: S.title }) }).then(loadGames).catch(() => {});
+}
+function flush(id) {
+  timers.delete(id);
+  const p = dirty.get(id), vid = S.vid; if (!p || !vid) return;
+  api('plays', { method: 'POST', body: JSON.stringify({ video: vid, id, data: cleanPlay(p) }) })
+    .then(() => { if (!timers.has(id)) dirty.delete(id); if (!timers.size) setStatus('Guardado en la nube', 'ok'); touchVideo(); })
+    .catch(e => { if (e.status === 401) dirty.delete(id); cloudError(e); });
+}
+// save one play (or everything when no play is given)
+function save(p) {
+  cacheLocal();
+  if (!cloud.on || !cloud.ok) return;
+  const list = p ? [p] : S.plays;
+  list.forEach((x, i) => {
+    if (x.ex) return;
+    dirty.set(x.id, x);
+    clearTimeout(timers.get(x.id));
+    timers.set(x.id, setTimeout(() => flush(x.id), p ? 700 : 80 * i));
+  });
+  setStatus('Guardando…', 'busy');
+}
+function removePlay(p) {
+  S.plays = S.plays.filter(x => x !== p);
+  cacheLocal();
+  if (!cloud.on) return;
+  clearTimeout(timers.get(p.id)); timers.delete(p.id); dirty.delete(p.id);
+  deleted.set(p.id, Date.now());
+  setStatus('Guardando…', 'busy');
+  api(`plays?v=${encodeURIComponent(S.vid)}&id=${encodeURIComponent(p.id)}`, { method: 'DELETE' })
+    .then(() => setStatus('Guardado en la nube', 'ok')).catch(cloudError);
+}
+async function fetchPlays(id, first) {
+  try {
+    const r = await api('plays?v=' + encodeURIComponent(id));
+    if (S.vid !== id) return;
+    const now = Date.now();
+    deleted.forEach((t, k) => { if (now - t > 30000) deleted.delete(k); });
+    const server = (r.plays || []).filter(p => !deleted.has(p.id));
+    const merged = server.map(p => dirty.get(p.id) || S.plays.find(x => x.id === p.id && JSON.stringify(cleanPlay(x)) === JSON.stringify(cleanPlay(p))) || p);
+    dirty.forEach((p, k) => { if (!server.some(x => x.id === k)) merged.push(p); });
+    const changed = JSON.stringify(merged.map(cleanPlay)) !== JSON.stringify(S.plays.map(cleanPlay)) || merged.length !== S.plays.length;
+    S.plays = merged; S.example = false;
+    if (S.sel && !S.plays.some(p => p.id === S.sel)) S.sel = null;
+    if (changed || first) { renderAll(); cacheLocal(); }
+    if (!timers.size) setStatus('Guardado en la nube', 'ok');
+    if (first && server.length) toast(`Se cargaron ${server.length} jugadas desde la nube.`);
+  } catch (e) { setStatus('Sin conexión a la base de datos', 'bad'); }
+}
+function subscribe(id) {
+  if (!cloud.on) return;
+  clearInterval(cloud.poll);
+  setStatus('Conectando…', 'busy');
+  fetchPlays(id, true);
+  cloud.poll = setInterval(() => { if (!document.hidden && S.vid === id) fetchPlays(id, false); }, 8000);
+}
+async function loadGames() {
+  if (!cloud.on) return;
+  try {
+    const r = await api('videos'), gs = $('gamesSel');
+    gs.innerHTML = '<option value="">Partidos guardados…</option>' + (r.videos || []).map(v => `<option value="${esc(v.id)}">${esc(v.title || v.id)}</option>`).join('');
+    gs.value = (r.videos || []).some(v => v.id === S.vid) ? S.vid : '';
+  } catch (e) {}
+}
+function paintAuth() {
+  if (!cloud.on) return;
+  $('loginBtn').hidden = false;
+  $('loginBtn').textContent = cloud.ok ? 'Salir' : 'Entrar como coach';
+  $('who').textContent = cloud.ok ? 'Coach · puede editar' : 'Modo solo lectura';
+  if (cloud.ok) $('keyForm').hidden = true;
+}
+async function tryKey(k, quiet) {
+  cloud.key = k;
+  try {
+    await api('check', { method: 'POST' });
+    cloud.ok = true;
+    try { localStorage.setItem('salavideo:coachkey', k); } catch (e) {}
+    if (!quiet) toast('Listo: ya puedes editar.');
+  } catch (e) {
+    cloud.ok = false; cloud.key = '';
+    try { localStorage.removeItem('salavideo:coachkey'); } catch (e2) {}
+    if (!quiet) toast(e.status === 401 ? 'Clave incorrecta.' : 'No se pudo verificar la clave. Revisa tu conexión.');
+  }
+  paintAuth(); renderAll();
+}
+$('loginBtn').onclick = () => {
+  if (cloud.ok) { cloud.ok = false; cloud.key = ''; try { localStorage.removeItem('salavideo:coachkey'); } catch (e) {} paintAuth(); renderAll(); toast('Saliste del modo coach.'); return; }
+  $('keyForm').hidden = !$('keyForm').hidden;
+  if (!$('keyForm').hidden) $('keyInput').focus();
+};
+$('keyForm').onsubmit = e => { e.preventDefault(); const k = $('keyInput').value.trim(); if (!k) return; $('keyInput').value = ''; tryKey(k, false); };
+$('gamesSel').onchange = () => { const v = $('gamesSel').value; if (v) loadUrl(v); };
+window.addEventListener('beforeunload', e => {
+  cacheLocal();
+  if (timers.size) { cloud.unloading = true; [...timers.keys()].forEach(id => { clearTimeout(timers.get(id)); flush(id); }); e.preventDefault(); e.returnValue = ''; }
+});
+// detect the database
+fetch('/api/health', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(async h => {
+  if (!h || !h.ok) return;
+  if (!h.db) { setStatus('Base de datos no conectada', 'bad'); return; }
+  cloud.on = true;
+  $('gamesSel').hidden = false;
+  if (!h.key) toast('Falta configurar la clave COACH_KEY en Cloudflare.');
+  let saved = ''; try { saved = localStorage.getItem('salavideo:coachkey') || ''; } catch (e) {}
+  paintAuth();
+  if (saved) await tryKey(saved, true);
+  loadGames(); setInterval(() => { if (!document.hidden) loadGames(); }, 30000);
+  if (S.vid) subscribe(S.vid); else setStatus('Conectado', 'ok');
+  renderAll();
+}).catch(() => {});
 
 // ---------- static controls ----------
 SPEEDS.forEach((s, i) => { const b = document.createElement('button'); b.className = 'btn sm'; b.textContent = s + '×'; b.dataset.s = s; b.title = 'Tecla ' + (i + 1); b.onclick = () => setSpeed(s); $('speeds').append(b); });
@@ -433,7 +597,7 @@ function paintTools() {
   $('drawToggle').classList.toggle('on', S.draw);
   cv.classList.toggle('active', S.draw);
   cv.style.pointerEvents = S.draw ? 'auto' : 'none';
-  $('saveDrawBtn').disabled = !(selPlay() && S.strokes.length);
+  $('saveDrawBtn').disabled = !(selPlay() && S.strokes.length && canEdit());
 }
 function setSpeed(s) {
   S.rate = s; P.rate(s);
@@ -493,9 +657,9 @@ $('drawToggle').onclick = () => setDraw(!S.draw);
 $('undoBtn').onclick = () => { S.strokes.pop(); redraw(); paintTools(); };
 $('clearBtn').onclick = () => { S.strokes = []; redraw(); paintTools(); };
 $('saveDrawBtn').onclick = () => {
-  const p = selPlay(); if (!p || !S.strokes.length) return;
+  const p = selPlay(); if (!p || !S.strokes.length || !needEdit()) return;
   p.drawing = { t: P.t, strokes: JSON.parse(JSON.stringify(S.strokes)) };
-  save(); renderList(); toast(`Dibujo guardado en la jugada ${numOf(p)} (${fmt(P.t)}).`);
+  save(p); renderList(); toast(`Dibujo guardado en la jugada ${numOf(p)} (${fmt(P.t)}).`);
 };
 
 // ---------- transport ----------
@@ -576,12 +740,14 @@ function nextSituation(prev) {
   return n;
 }
 function newPlay() {
+  if (!needEdit()) return;
+  if (cloud.on && !S.vid) { toast('Primero carga el partido de YouTube.'); return; }
   if (S.example) { S.plays = []; S.example = false; }
   const t = P.t, d = P.d;
   const before = sorted().filter(p => p.start <= t).pop();
   const base = before ? nextSituation(before) : { q: '1', unit: 'O', down: '1', dist: 10, side: 'P', yard: 25, hash: '' };
   const p = { id: uid(), start: t, end: d ? Math.min(d, t + 8) : t + 8, form: '', type: '', res: '', gain: '', player: '', notes: '', ...base };
-  S.plays.push(p); save(); select(p.id);
+  S.plays.push(p); save(p); select(p.id);
   $('fForm').focus();
 }
 function select(id) {
@@ -597,13 +763,13 @@ function moveSel(dir) {
 $('newBtn').onclick = newPlay;
 let delArm = false, delT;
 $('delBtn').onclick = () => {
-  const p = selPlay(); if (!p) return;
+  const p = selPlay(); if (!p || !needEdit()) return;
   if (!delArm) { delArm = true; $('delBtn').textContent = '¿Seguro?'; clearTimeout(delT); delT = setTimeout(() => { delArm = false; $('delBtn').textContent = 'Eliminar'; }, 2500); return; }
   delArm = false; $('delBtn').textContent = 'Eliminar';
-  S.plays = S.plays.filter(x => x !== p); S.sel = null; save(); renderAll(); toast('Jugada eliminada.');
+  S.sel = null; removePlay(p); renderAll(); toast('Jugada eliminada.');
 };
-$('setIn').onclick = () => { const p = selPlay(); if (!p || !P.ok) return; p.start = P.t; if (p.end < p.start) p.end = p.start + 6; save(); renderAll(); };
-$('setOut').onclick = () => { const p = selPlay(); if (!p || !P.ok) return; p.end = Math.max(p.start + 0.5, P.t); save(); renderAll(); };
+$('setIn').onclick = () => { const p = selPlay(); if (!p || !P.ok || !needEdit()) return; p.start = P.t; if (p.end < p.start) p.end = p.start + 6; save(p); renderAll(); };
+$('setOut').onclick = () => { const p = selPlay(); if (!p || !P.ok || !needEdit()) return; p.end = Math.max(p.start + 0.5, P.t); save(p); renderAll(); };
 $('clipBtn').onclick = () => playClip(selPlay());
 $('loopBtn').onclick = () => { S.loop = !S.loop; if (S.loop) S.chain = false; paintModes(); };
 $('chainBtn').onclick = () => { S.chain = !S.chain; if (S.chain) S.loop = false; paintModes(); };
@@ -613,17 +779,19 @@ const FIELDS = { fQ: 'q', fUnit: 'unit', fDown: 'down', fDist: 'dist', fSide: 's
 const NUMERIC = new Set(['dist', 'yard', 'gain']);
 Object.entries(FIELDS).forEach(([id, k]) => {
   $(id).addEventListener('input', () => {
-    const p = selPlay(); if (!p) return;
+    const p = selPlay(); if (!p || !canEdit()) return;
     const raw = $(id).value; p[k] = NUMERIC.has(k) ? (raw === '' ? '' : Number(raw)) : raw;
     if (p.ex) delete p.ex;
-    save(); renderList(); renderTimeline(); renderSelHead();
+    save(p); renderList(); renderTimeline(); renderSelHead();
   });
 });
 function renderSelHead() { const p = selPlay(); $('selNum').textContent = p ? `${numOf(p)} · ${ddText(p)}${posText(p) ? ' · ' + posText(p) : ''}` : '—'; }
 function renderForm() {
   const p = selPlay();
-  $('form').setAttribute('aria-disabled', p ? 'false' : 'true');
-  $('delBtn').disabled = !p;
+  const ed = canEdit();
+  $('form').setAttribute('aria-disabled', p && ed ? 'false' : 'true');
+  $('delBtn').disabled = !p || !ed;
+  $('newBtn').disabled = !ed;
   Object.entries(FIELDS).forEach(([id, k]) => { const el = $(id); if (document.activeElement !== el) el.value = p ? (p[k] ?? '') : ''; });
   $('inTc').textContent = p ? fmt(p.start) : '—';
   $('outTc').textContent = p ? fmt(p.end) : '—';
@@ -681,12 +849,14 @@ function renderAll() { renderForm(); renderList(); renderTimeline(); renderHead(
 // ---------- import / export ----------
 $('importInput').onchange = async e => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  if (!needEdit()) return;
   try {
     const data = JSON.parse(await f.text());
     const plays = Array.isArray(data) ? data : data.plays;
     if (!Array.isArray(plays)) throw new Error();
     if (data.youtube && data.youtube !== S.vid) loadUrl(data.youtube);
-    S.plays = plays.map(p => ({ ...p, id: p.id || uid() })); S.example = false; S.sel = null;
+    if (cloud.on && !S.vid) { toast('Primero carga el partido de YouTube.'); return; }
+    S.plays = plays.map(p => { const o = { ...p, id: p.id || uid() }; delete o.ex; return o; }); S.example = false; S.sel = null;
     save(); renderAll();
     toast(`Se importaron ${plays.length} jugadas.`);
   } catch (err) { toast('No se pudo leer el archivo. Usa un .json exportado desde Sala de Video.'); }
