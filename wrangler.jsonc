@@ -1,0 +1,16 @@
+{
+  "name": "sala-de-video",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "sala-video",
+      "database_id": "e2275ae3-27b4-46c8-882e-6a0d997c877e"
+    }
+  ]
+}
