@@ -62,13 +62,27 @@ header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
 kbd { font-family: var(--font-mono); font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; }
 .btn.primary kbd, .btn.on kbd { color: inherit; border-color: currentColor; opacity: .7; }
 
-main { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 12px; flex: 1; min-height: 0; }
+main { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 12px; flex: 1; min-height: 0; }
 @media (max-width: 980px) { main { grid-template-columns: minmax(0, 1fr); } }
 
 .left { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .stagebox { position: relative; background: #000; border-radius: var(--r); overflow: hidden; aspect-ratio: 16 / 9; max-width: 100%; border: 1px solid var(--line); box-shadow: 0 1px 3px rgba(20,40,60,.08); }
 .stagebox:fullscreen { aspect-ratio: auto; border: 0; border-radius: 0; width: 100% !important; }
-@media (min-width: 981px) { .tipline { display: none; } .right.fit { overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; } .right.fit .rows { max-height: 46vh; } }
+@media (min-width: 981px) { .tipline { display: none; } .right.fit { overflow: hidden; display: flex; flex-direction: column; }
+  .right.fit > .card:first-child { flex: none; max-height: 54%; overflow-y: auto; }
+  .right.fit > .card:first-child > .hd { position: sticky; top: 0; z-index: 2; background: var(--panel); }
+  #formCard > .hd { flex-wrap: nowrap; }
+  #formCard > .hd h2 { min-width: 0; white-space: nowrap; overflow: hidden; }
+  #formCard > .hd .chip { overflow: hidden; text-overflow: ellipsis; max-width: 110px; display: inline-block; vertical-align: middle; }
+  .right.fit .filters { flex-wrap: nowrap; gap: 6px; padding: 8px 12px; }
+  .right.fit .filters select, .right.fit .filters input { font-size: 12px; padding: 5px 4px; flex: 1 1 0; min-width: 0; }
+  .right.fit .filters input { flex: 1.4 1 0; }
+  .right.fit .list { flex: 1 1 auto; min-height: 0; }
+  .right.fit .rows { flex: 1 1 auto; min-height: 0; max-height: none; }
+  .form { padding: 10px 12px 12px; gap: 6px 8px; }
+  .form input, .form select { padding: 4px 6px; height: 30px; }
+  .form textarea { min-height: 40px; height: 40px; }
+  .form label { font-size: 11px; } }
 video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
 canvas#draw { position: absolute; touch-action: none; }
 canvas#draw.active { cursor: crosshair; }
@@ -123,16 +137,20 @@ canvas#draw.active { cursor: crosshair; }
 .filters select, .filters input { background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 5px 6px; font-size: 13px; min-width: 0; }
 .filters input { flex: 1; min-width: 90px; }
 .rows { overflow-y: auto; flex: 1; max-height: 52vh; }
+#formCard.collapsed .form { display: none; }
+#formCard.collapsed .hd { border-bottom: 0; }
+.iconbtn { width: 30px; justify-content: center; padding: 5px 0; }
+#formCard.collapsed .iconbtn { transform: rotate(-90deg); }
 @media (max-width: 980px) { .rows { max-height: none; } }
-.row { display: grid; grid-template-columns: 30px 6px minmax(0,1fr) auto; gap: 8px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); cursor: pointer; width: 100%; text-align: left; background: none; border-left: 0; border-right: 0; border-top: 0; }
+.row { display: grid; grid-template-columns: 26px 4px minmax(0,1fr) auto; gap: 10px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--line); cursor: pointer; width: 100%; text-align: left; background: none; border-left: 0; border-right: 0; border-top: 0; }
 .row:hover { background: var(--panel-2); }
 .row.sel { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--accent); }
-.row .n { font-family: var(--font-display); font-weight: 300; font-size: 20px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.row .n { font-family: var(--font-display); font-weight: 400; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .row .bar { width: 6px; align-self: stretch; border-radius: 2px; }
-.row .main { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.row .main { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
 .row .top { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .row .sub { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.row .gain { font-family: var(--font-display); font-weight: 300; font-size: 22px; font-variant-numeric: tabular-nums; text-align: right; }
+.row .gain { font-family: var(--font-display); font-weight: 400; font-size: 18px; font-variant-numeric: tabular-nums; text-align: right; }
 .gain.pos { color: var(--good); } .gain.neg { color: var(--bad); }
 .tag { font-size: 11px; padding: 1px 6px; border-radius: 3px; border: 1px solid var(--line); color: var(--muted); }
 .tag.ex { border-color: var(--accent); color: var(--accent); }
@@ -293,12 +311,13 @@ canvas#draw { inset: 0; width: 100%; height: 100%; }
     </section>
 
     <aside class="right">
-      <div class="card">
+      <div class="card" id="formCard">
         <div class="hd">
           <h2>Jugada <span class="chip" id="selNum">—</span></h2>
           <span class="spacer"></span>
           <button class="btn sm primary" id="newBtn">+ Nueva <kbd>N</kbd></button>
           <button class="btn sm" id="delBtn" disabled>Eliminar</button>
+          <button class="btn sm iconbtn" id="formToggle" aria-expanded="true" title="Mostrar u ocultar el formulario">▾</button>
         </div>
         <div class="form" id="form" aria-disabled="true">
           <div class="times">
@@ -312,7 +331,7 @@ canvas#draw { inset: 0; width: 100%; height: 100%; }
           <div class="f"><label for="fQ">Cuarto</label><select id="fQ"><option>1</option><option>2</option><option>3</option><option>4</option><option value="TE">TE</option></select></div>
           <div class="f" style="grid-column: span 3"><label for="fUnit">Unidad</label><select id="fUnit"><option value="O">Ofensiva</option><option value="D">Defensiva</option><option value="ST">Equipos especiales</option></select></div>
           <div class="f"><label for="fDown">Down</label><select id="fDown"><option value="">—</option><option>1</option><option>2</option><option>3</option><option>4</option></select></div>
-          <div class="f"><label for="fDist">Yardas a avanzar</label><input id="fDist" type="number" min="0" max="99" inputmode="numeric"></div>
+          <div class="f"><label for="fDist">Distancia</label><input id="fDist" type="number" min="0" max="99" inputmode="numeric"></div>
           <div class="f"><label for="fSide">Campo</label><select id="fSide"><option value="P">Propio</option><option value="R">Rival</option></select></div>
           <div class="f"><label for="fYard">Yarda</label><input id="fYard" type="number" min="1" max="50" inputmode="numeric"></div>
           <div class="f"><label for="fHash">Hash</label><select id="fHash"><option value="">—</option><option value="I">Izq</option><option value="M">Medio</option><option value="D">Der</option></select></div>
@@ -333,10 +352,10 @@ canvas#draw { inset: 0; width: 100%; height: 100%; }
           <button class="btn sm" id="chainBtn" title="Al terminar un clip, pasa a la siguiente jugada de la lista">Encadenar</button>
         </div>
         <div class="filters">
-          <select id="qUnit" aria-label="Filtrar unidad"><option value="">Todas las unidades</option><option value="O">Ofensiva</option><option value="D">Defensiva</option><option value="ST">Eq. especiales</option></select>
-          <select id="qDown" aria-label="Filtrar down"><option value="">Todo down</option><option>1</option><option>2</option><option>3</option><option>4</option></select>
-          <select id="qType" aria-label="Filtrar tipo"><option value="">Todo tipo</option></select>
-          <input id="qText" placeholder="Buscar formación, jugador, nota" aria-label="Buscar">
+          <select id="qUnit" aria-label="Filtrar unidad"><option value="">Unidad</option><option value="O">Ofensiva</option><option value="D">Defensiva</option><option value="ST">Eq. especiales</option></select>
+          <select id="qDown" aria-label="Filtrar down"><option value="">Down</option><option>1</option><option>2</option><option>3</option><option>4</option></select>
+          <select id="qType" aria-label="Filtrar tipo"><option value="">Tipo</option></select>
+          <input id="qText" placeholder="Buscar" aria-label="Buscar">
         </div>
         <div class="rows" id="rows"></div>
         <div class="stats" id="stats"></div>
@@ -957,6 +976,7 @@ $('delBtn').onclick = () => {
 $('setIn').onclick = () => { const p = selPlay(); if (!p || !P.ok || !needEdit()) return; p.start = P.t; if (p.end < p.start) p.end = p.start + 6; save(p); renderAll(); };
 $('setOut').onclick = () => { const p = selPlay(); if (!p || !P.ok || !needEdit()) return; p.end = Math.max(p.start + 0.5, P.t); save(p); renderAll(); };
 $('clipBtn').onclick = () => playClip(selPlay());
+$('formToggle').onclick = () => { S.formHidden = !S.formHidden; renderForm(); };
 $('loopBtn').onclick = () => { S.loop = !S.loop; if (S.loop) S.chain = false; paintModes(); };
 $('chainBtn').onclick = () => { S.chain = !S.chain; if (S.chain) S.loop = false; paintModes(); };
 function paintModes() { $('loopBtn').classList.toggle('on', S.loop); $('chainBtn').classList.toggle('on', S.chain); }
@@ -974,6 +994,10 @@ Object.entries(FIELDS).forEach(([id, k]) => {
 function renderSelHead() { const p = selPlay(); $('selNum').textContent = p ? `${numOf(p)} · ${ddText(p)}${posText(p) ? ' · ' + posText(p) : ''}` : '—'; }
 function renderForm() {
   const p = selPlay();
+  const collapsed = !p || S.formHidden;
+  $('formCard').classList.toggle('collapsed', collapsed);
+  $('formToggle').setAttribute('aria-expanded', String(!collapsed));
+  $('formToggle').disabled = !p;
   const ed = canEdit();
   $('form').setAttribute('aria-disabled', p && ed ? 'false' : 'true');
   $('delBtn').disabled = !p || !ed;
