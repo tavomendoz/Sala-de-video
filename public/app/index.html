@@ -4,199 +4,21 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Sideline</title>
+<meta name="description" content="Sideline: sala de video para coaches de football americano y flag. Etiqueta jugadas, dibuja sobre el video y comparte clips con tu equipo. En español y en pesos.">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2064%2064%27%3E%3Crect%20width%3D%2764%27%20height%3D%2764%27%20rx%3D%2714%27%20fill%3D%27%230D0D0D%27/%3E%3Ccircle%20cx%3D%2732%27%20cy%3D%2732%27%20r%3D%2723%27%20fill%3D%27none%27%20stroke%3D%27%23FFFFFF%27%20stroke-width%3D%276%27/%3E%3Cpath%20d%3D%27M26%2020%20L45%2032%20L26%2044%20Z%27%20fill%3D%27%23F26B1D%27%20stroke%3D%27%23F26B1D%27%20stroke-width%3D%273%27%20stroke-linejoin%3D%27round%27/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap">
-<style>
-/* Layout: video stage + transport on the left, play card + play list on the right; stacks on phones. Single light look by choice. */
-:root {
-  color-scheme: light;
-  --bg: #eef3f8;
-  --panel: #ffffff;
-  --panel-2: #f4f7fa;
-  --line: #d5dee7;
-  --fg: #1f2b37;
-  --muted: #5d6d7d;
-  --accent: #c9570f;      /* naranja Sideline (más oscuro que el del logo para leer texto blanco) */
-  --accent-ink: #ffffff;
-  --off: #e8742a;
-  --def: #2f80d1;
-  --st: #8a5cc2;
-  --good: #1f6b2e;        /* verde campo del logo */
-  --bad: #d23f3f;
-  --font-display: "Segoe UI", "Open Sans", "Helvetica Neue", Arial, sans-serif;
-  --font-body: "Segoe UI", "Open Sans", "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "Segoe UI", "Open Sans", "Helvetica Neue", Arial, sans-serif;
-  --r: 6px;
-}
-html, body { height: 100%; }
-body {
-  background: var(--bg); color: var(--fg);
-  font-family: var(--font-body); font-size: 14px;
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-block: 12px;
-  box-sizing: border-box;
-}
-*, *::before, *::after { box-sizing: border-box; }
-button, input, select, textarea { font: inherit; color: inherit; }
-button { cursor: pointer; }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-.app { display: flex; flex-direction: column; gap: 12px; min-height: 100%; }
-header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
-.brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; }
-.brand h1 { font-family: var(--font-display); font-weight: 300; font-size: 30px; letter-spacing: 0; margin: 0; line-height: 1.1; }
-.brand h1 .brandmark { display: block; height: 34px; width: auto; }
-.brand h1 .homelink { display: block; color: inherit; }
-.brand .file { color: var(--muted); font-size: 13px; max-width: 32ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.actions { display: flex; flex-wrap: wrap; gap: 8px; }
-
-.btn { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--r); padding: 7px 12px; font-weight: 400; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-.btn:hover { border-color: var(--muted); }
-.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
-.btn.on { background: var(--fg); color: var(--bg); border-color: var(--fg); }
-.btn:disabled { opacity: .45; cursor: not-allowed; }
-.btn.sm { padding: 5px 9px; font-size: 13px; }
-kbd { font-family: var(--font-mono); font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; }
-.btn.primary kbd, .btn.on kbd { color: inherit; border-color: currentColor; opacity: .7; }
-
-main { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 12px; flex: 1; min-height: 0; }
-@media (max-width: 980px) { main { grid-template-columns: minmax(0, 1fr); } }
-
-.left { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.stagebox { position: relative; background: #000; border-radius: var(--r); overflow: hidden; aspect-ratio: 16 / 9; max-width: 100%; border: 1px solid var(--line); box-shadow: 0 1px 3px rgba(20,40,60,.08); }
-.stagebox:fullscreen { aspect-ratio: auto; border: 0; border-radius: 0; }
-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
-canvas#draw { position: absolute; touch-action: none; }
-canvas#draw.active { cursor: crosshair; }
-.drop { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--muted);
-  background: repeating-linear-gradient(90deg, transparent 0 9.9%, rgba(31,107,46,.07) 9.9% 10%), var(--panel-2); }
-.drop strong { display: block; font-family: var(--font-display); font-size: 28px; font-weight: 300; color: var(--fg); }
-.drop p { margin: 6px 0 14px; max-width: 46ch; }
-.drop.over { outline: 3px dashed var(--accent); outline-offset: -10px; }
-.hud { position: absolute; left: 10px; top: 10px; display: flex; gap: 6px; pointer-events: none; }
-.hud span { background: rgba(0,0,0,.65); border-radius: 4px; padding: 3px 8px; font-family: var(--font-display); font-size: 16px; font-weight: 600; }
-.hud .spd { color: var(--accent); }
-
-/* timeline */
-.timeline { position: relative; height: 34px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); cursor: pointer; touch-action: none; overflow: hidden; }
-.timeline .prog { position: absolute; inset: 0 auto 0 0; background: rgba(201,87,15,.10); pointer-events: none; }
-.timeline .mk { position: absolute; top: 7px; bottom: 7px; min-width: 3px; border-radius: 2px; opacity: .75; pointer-events: none; }
-.timeline .mk.sel { top: 3px; bottom: 3px; opacity: 1; box-shadow: 0 0 0 2px var(--fg); }
-.timeline .head { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--fg); pointer-events: none; }
-
-.transport { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.tc { font-family: var(--font-mono); font-size: 14px; min-width: 15ch; font-variant-numeric: tabular-nums; }
-.tc b { color: var(--fg); font-weight: 500; } .tc { color: var(--muted); }
-.group { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
-.group .btn { border: 0; border-radius: 0; border-right: 1px solid var(--line); }
-.group .btn:last-child { border-right: 0; }
-.spacer { flex: 1; }
-
-.drawbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); }
-.drawbar .lbl { font-family: var(--font-display); text-transform: uppercase; font-weight: 700; letter-spacing: .02em; font-size: 12px; color: var(--muted); margin-right: 4px; }
-.sw { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line); padding: 0; }
-.sw.on { border-color: var(--fg); box-shadow: 0 0 0 2px var(--bg) inset; }
-
-/* right */
-.right { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; }
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); box-shadow: 0 1px 3px rgba(20,40,60,.06); }
-.card h2 { font-family: var(--font-display); font-weight: 700; text-transform: uppercase; letter-spacing: .02em; font-size: 12px; margin: 0; display: flex; align-items: center; gap: 8px; }
-.card .hd { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
-.card .hd .spacer { flex: 1; }
-.form { padding: 12px; display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; }
-.form .f { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.form .c2 { grid-column: span 2; } .form .c4 { grid-column: 1 / -1; }
-.form label { font-size: 12px; color: var(--muted); }
-.form input, .form select, .form textarea { background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 6px 7px; width: 100%; min-width: 0; }
-.form textarea { resize: vertical; min-height: 54px; }
-.form .times { display: flex; gap: 6px; align-items: center; grid-column: 1 / -1; flex-wrap: wrap; }
-.form .times .tc { min-width: 0; }
-.form[aria-disabled="true"] { opacity: .45; pointer-events: none; }
-.chip { font-family: var(--font-display); font-weight: 600; font-size: 13px; letter-spacing: 0; padding: 1px 8px; border-radius: 3px; background: var(--panel-2); border: 1px solid var(--line); white-space: nowrap; }
-
-.list { display: flex; flex-direction: column; flex: 1; min-height: 260px; }
-.filters { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
-.filters select, .filters input { background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 5px 6px; font-size: 13px; min-width: 0; }
-.filters input { flex: 1; min-width: 90px; }
-.rows { overflow-y: auto; flex: 1; max-height: 52vh; }
-@media (max-width: 980px) { .rows { max-height: none; } }
-.row { display: grid; grid-template-columns: 30px 6px minmax(0,1fr) auto; gap: 8px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); cursor: pointer; width: 100%; text-align: left; background: none; border-left: 0; border-right: 0; border-top: 0; }
-.row:hover { background: var(--panel-2); }
-.row.sel { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--accent); }
-.row .n { font-family: var(--font-display); font-weight: 300; font-size: 20px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.row .bar { width: 6px; align-self: stretch; border-radius: 2px; }
-.row .main { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.row .top { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.row .sub { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.row .gain { font-family: var(--font-display); font-weight: 300; font-size: 22px; font-variant-numeric: tabular-nums; text-align: right; }
-.gain.pos { color: var(--good); } .gain.neg { color: var(--bad); }
-.tag { font-size: 11px; padding: 1px 6px; border-radius: 3px; border: 1px solid var(--line); color: var(--muted); }
-.tag.ex { border-color: var(--accent); color: var(--accent); }
-.tag.draw { color: var(--fg); }
-.empty { padding: 24px 16px; color: var(--muted); text-align: center; }
-.stats { display: flex; gap: 14px; padding: 8px 12px; color: var(--muted); font-size: 12px; flex-wrap: wrap; border-top: 1px solid var(--line); }
-.stats b { color: var(--fg); font-family: var(--font-display); font-size: 15px; font-weight: 600; }
-
-.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: var(--r); font-weight: 500; z-index: 50; max-width: calc(100% - 32px); }
-.help { position: fixed; inset: 0; background: rgba(20,40,60,.35); display: grid; place-items: center; z-index: 40; padding: 16px; }
-.help .card { max-width: 520px; width: 100%; }
-.gate { position: fixed; inset: 0; z-index: 60; background: var(--bg); display: grid; place-items: center; padding: 24px max(16px, env(safe-area-inset-left, 0px)); overflow-y: auto; }
-.gate .card { width: 100%; max-width: 400px; padding: 28px; display: flex; flex-direction: column; gap: 14px; }
-.gate .brandmark { height: 30px; width: auto; display: block; margin-bottom: 4px; }
-.gate h2 { font-family: var(--font-display); font-weight: 300; font-size: 26px; margin: 0; letter-spacing: -0.01em; }
-.gate p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
-.gate a { color: var(--fg); }
-.lf { display: flex; flex-direction: column; gap: 5px; }
-.lf label { font-size: 12px; color: var(--muted); }
-.lf input, .lf select { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px 11px; font-size: 15px; width: 100%; min-width: 0; }
-.lf input:focus, .lf select:focus { outline: none; border-color: var(--fg); }
-.lerr { color: var(--bad); font-size: 13px; margin: 0; }
-.modal { position: fixed; inset: 0; z-index: 55; background: rgba(20,40,60,.35); display: grid; place-items: center; padding: 16px; overflow-y: auto; }
-.modal .card { width: 100%; max-width: 640px; }
-.modal .body { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
-.users { width: 100%; border-collapse: collapse; font-size: 13px; }
-.users th, .users td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
-.users th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .02em; }
-.users td.act { text-align: right; white-space: nowrap; }
-.userform { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(0,1fr) minmax(0,.8fr) auto; gap: 8px; align-items: end; }
-@media (max-width: 640px) { .userform { grid-template-columns: minmax(0,1fr); } }
-.creds { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 12px; font-size: 14px; }
-.creds code { font-family: var(--font-mono); font-size: 15px; background: var(--panel); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line); }
-.help dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; padding: 14px; margin: 0; }
-.help dt { text-align: right; } .help dd { margin: 0; color: var(--muted); }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
-</style>
-
-<style>
-body { margin: 0; }
-[hidden] { display: none !important; }
-.stagebox #yt, .stagebox iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
-canvas#draw { inset: 0; width: 100%; height: 100%; }
-.card .hd { flex-wrap: wrap; }
-.urlbar { display: flex; gap: 8px; flex: 1 1 340px; min-width: 0; max-width: 560px; }
-.urlbar input { flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--line); border-radius: var(--r); padding: 7px 10px; }
-.drop .urlbar { margin: 0 auto; }
-.note { font-size: 12px; color: var(--muted); }
-.cloudbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: 100%; }
-.cloudbar select { background: var(--bg); border: 1px solid var(--line); border-radius: var(--r); padding: 6px 8px; max-width: 100%; min-width: 0; flex: 0 1 380px; }
-.status { font-size: 12px; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
-.status.ok { color: var(--good); border-color: var(--good); }
-.status.bad { color: var(--bad); border-color: var(--bad); }
-.status.busy { color: var(--accent); border-color: var(--accent); }
-.keyform { display: flex; gap: 6px; }
-.keyform input { background: var(--bg); border: 1px solid var(--line); border-radius: var(--r); padding: 5px 8px; width: 150px; min-width: 0; }
-.who { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 28ch; }
-.warn { background: #fff4e5; border: 1px solid var(--accent); color: var(--fg); border-radius: var(--r); padding: 10px 12px; }
-</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Geist+Mono&display=swap">
+<link rel="stylesheet" href="/assets/site.css">
+<script>
+  // Enlaces viejos a un partido (?v=...) siguen abriendo la sala de video.
+  if (new URLSearchParams(location.search).get('v')) location.replace('/app/' + location.search);
+</script>
 </head>
 <body>
-<div class="app">
-  <header>
-    <div class="brand">
-      <h1><a class="homelink" href="/" aria-label="Sideline, inicio"><svg class='brandmark' viewBox='0 0 593 104' height='34' role='img' aria-label='Sideline'><circle cx='52' cy='52' r='50' fill='var(--fg)'/>
+<header class="wrap">
+  <nav class="nav" aria-label="Principal">
+    <a class="logo" href="/" aria-label="Sideline, inicio"><svg class='brandmark' viewBox='0 0 593 104' height='28' role='img' aria-label='Sideline'><circle cx='52' cy='52' r='50' fill='#000000'/>
 <rect x='48.25' y='8.25' width='7.50' height='7.50' rx='1.35' fill='var(--bg)' transform='rotate(0.0 52.00 12.00)'/>
 <rect x='65.61' y='12.21' width='7.50' height='7.50' rx='1.35' fill='var(--bg)' transform='rotate(25.7 69.36 15.96)'/>
 <rect x='79.52' y='23.31' width='7.50' height='7.50' rx='1.35' fill='var(--bg)' transform='rotate(51.4 83.27 27.06)'/>
@@ -212,872 +34,300 @@ canvas#draw { inset: 0; width: 100%; height: 100%; }
 <rect x='16.98' y='23.31' width='7.50' height='7.50' rx='1.35' fill='var(--bg)' transform='rotate(308.6 20.73 27.06)'/>
 <rect x='30.89' y='12.21' width='7.50' height='7.50' rx='1.35' fill='var(--bg)' transform='rotate(334.3 34.64 15.96)'/>
 <circle cx='52' cy='52' r='31.00' fill='var(--bg)'/>
-<circle cx='52' cy='52' r='25.00' fill='none' stroke='var(--fg)' stroke-width='3.75'/>
-<path d='M42.25 39.00 L65.65 52.00 L42.25 65.00 Z' fill='#F26B1D' stroke='#F26B1D' stroke-width='2.50' stroke-linejoin='round'/><g transform='translate(128 85)'><path d='M3.588 -13.34Q28.796 -11.959999999999999 37.72 -11.959999999999999Q39.836 -11.959999999999999 41.078 -13.201999999999998Q42.32 -14.443999999999999 42.32 -16.56V-24.84H21.16Q11.5 -24.84 7.13 -29.21Q2.76 -33.58 2.76 -43.24V-46.0Q2.76 -55.66 7.13 -60.03Q11.5 -64.4 21.16 -64.4H53.452V-51.519999999999996H24.84Q19.32 -51.519999999999996 19.32 -46.0V-44.16Q19.32 -38.64 24.84 -38.64H41.4Q50.416 -38.64 54.647999999999996 -34.408Q58.879999999999995 -30.176 58.879999999999995 -21.16V-16.56Q58.879999999999995 -7.544 54.647999999999996 -3.312Q50.416 0.9199999999999999 41.4 0.9199999999999999Q36.708 0.9199999999999999 31.464 0.736L23.0 0.368Q13.616 -0.092 3.588 -0.9199999999999999ZM99.36000000000001 0.0H66.24000000000001V-12.879999999999999H74.52000000000001V-51.519999999999996H66.24000000000001V-64.4H99.36000000000001V-51.519999999999996H91.08V-12.879999999999999H99.36000000000001ZM145.36 -64.4Q155.756 -64.4 161.138 -59.018Q166.52 -53.635999999999996 166.52 -43.24V-21.16Q166.52 -10.764 161.138 -5.382Q155.756 0.0 145.36 0.0H109.48V-64.4ZM149.96 -43.24Q149.96 -51.519999999999996 141.68 -51.519999999999996H126.04V-12.879999999999999H141.68Q149.96 -12.879999999999999 149.96 -21.16ZM228.62 0.0H177.56000000000003V-64.4H228.62V-51.519999999999996H194.12V-39.1H221.26000000000002V-26.22H194.12V-12.879999999999999H228.62ZM254.38 -12.879999999999999H287.96000000000004V0.0H237.82000000000002V-64.4H254.38ZM326.6 0.0H293.48V-12.879999999999999H301.76000000000005V-51.519999999999996H293.48V-64.4H326.6V-51.519999999999996H318.32000000000005V-12.879999999999999H326.6ZM392.84000000000003 0.0H375.36L353.28000000000003 -38.64V0.0H336.72V-64.4H354.20000000000005L376.28000000000003 -25.759999999999998V-64.4H392.84000000000003ZM456.78000000000003 0.0H405.72V-64.4H456.78000000000003V-51.519999999999996H422.28000000000003V-39.1H449.4200000000001V-26.22H422.28000000000003V-12.879999999999999H456.78000000000003Z' fill='var(--fg)'/></g></svg></a></h1>
-      <div class="file" id="fileName">Sin video cargado</div>
+<circle cx='52' cy='52' r='25.00' fill='none' stroke='#000000' stroke-width='3.75'/>
+<path d='M42.25 39.00 L65.65 52.00 L42.25 65.00 Z' fill='#F26B1D' stroke='#F26B1D' stroke-width='2.50' stroke-linejoin='round'/><g transform='translate(128 85)'><path d='M3.588 -13.34Q28.796 -11.959999999999999 37.72 -11.959999999999999Q39.836 -11.959999999999999 41.078 -13.201999999999998Q42.32 -14.443999999999999 42.32 -16.56V-24.84H21.16Q11.5 -24.84 7.13 -29.21Q2.76 -33.58 2.76 -43.24V-46.0Q2.76 -55.66 7.13 -60.03Q11.5 -64.4 21.16 -64.4H53.452V-51.519999999999996H24.84Q19.32 -51.519999999999996 19.32 -46.0V-44.16Q19.32 -38.64 24.84 -38.64H41.4Q50.416 -38.64 54.647999999999996 -34.408Q58.879999999999995 -30.176 58.879999999999995 -21.16V-16.56Q58.879999999999995 -7.544 54.647999999999996 -3.312Q50.416 0.9199999999999999 41.4 0.9199999999999999Q36.708 0.9199999999999999 31.464 0.736L23.0 0.368Q13.616 -0.092 3.588 -0.9199999999999999ZM99.36000000000001 0.0H66.24000000000001V-12.879999999999999H74.52000000000001V-51.519999999999996H66.24000000000001V-64.4H99.36000000000001V-51.519999999999996H91.08V-12.879999999999999H99.36000000000001ZM145.36 -64.4Q155.756 -64.4 161.138 -59.018Q166.52 -53.635999999999996 166.52 -43.24V-21.16Q166.52 -10.764 161.138 -5.382Q155.756 0.0 145.36 0.0H109.48V-64.4ZM149.96 -43.24Q149.96 -51.519999999999996 141.68 -51.519999999999996H126.04V-12.879999999999999H141.68Q149.96 -12.879999999999999 149.96 -21.16ZM228.62 0.0H177.56000000000003V-64.4H228.62V-51.519999999999996H194.12V-39.1H221.26000000000002V-26.22H194.12V-12.879999999999999H228.62ZM254.38 -12.879999999999999H287.96000000000004V0.0H237.82000000000002V-64.4H254.38ZM326.6 0.0H293.48V-12.879999999999999H301.76000000000005V-51.519999999999996H293.48V-64.4H326.6V-51.519999999999996H318.32000000000005V-12.879999999999999H326.6ZM392.84000000000003 0.0H375.36L353.28000000000003 -38.64V0.0H336.72V-64.4H354.20000000000005L376.28000000000003 -25.759999999999998V-64.4H392.84000000000003ZM456.78000000000003 0.0H405.72V-64.4H456.78000000000003V-51.519999999999996H422.28000000000003V-39.1H449.4200000000001V-26.22H422.28000000000003V-12.879999999999999H456.78000000000003Z' fill='#000000'/></g></svg></a>
+    <div class="links">
+      <a class="btn btn-ghost hide-sm" href="#como-funciona">Cómo funciona</a>
+      <a class="btn btn-ghost hide-sm" href="#preguntas">Preguntas</a>
+      <a class="btn btn-ghost" href="/contacto">Contacto</a>
+      <a class="btn btn-fill" href="/app/">Ingresar</a>
     </div>
-    <form class="urlbar" id="urlForm">
-      <input id="urlInput" type="url" placeholder="Pega el enlace de YouTube del partido" aria-label="Enlace de YouTube">
-      <button class="btn primary" type="submit">Cargar</button>
-    </form>
-    <div class="actions">
-      <label class="btn" for="importInput">Importar etiquetas</label>
-      <input type="file" id="importInput" accept=".json,application/json" hidden>
-      <button class="btn" id="exportJson">Exportar .json</button>
-      <button class="btn" id="exportCsv">Exportar .csv</button>
-      <button class="btn" id="shareBtn">Copiar enlace</button>
-      <button class="btn" id="helpBtn" aria-label="Atajos de teclado">Atajos <kbd>?</kbd></button>
+  </nav>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <p class="eyebrow">Sala de video para football americano y flag</p>
+        <h1 class="display">Analiza cada jugada con tu equipo, sin pagar en dólares.</h1>
+        <p class="lead">Sideline es la herramienta para que coaches etiqueten jugadas, dibujen sobre el video y compartan los clips con sus jugadores. Funciona en el navegador, en español y con planes en pesos.</p>
+        <div class="actions">
+          <a class="btn btn-fill btn-lg" href="/contacto">Solicitar una demo</a>
+          <a class="btn btn-line btn-lg" href="/app/">Ingresar a Sideline</a>
+        </div>
+        <p class="note">Sin instalar nada. Cada coach y cada jugador entra con su propio usuario, también desde el celular.</p>
+      </div>
+
+      <div class="visual" aria-hidden="true">
+        <svg viewBox="0 0 560 430" font-family="Inter, system-ui, sans-serif">
+          <defs>
+            <radialGradient id="turf" cx="45%" cy="40%" r="75%">
+              <stop offset="0" stop-color="#2f8a45"/>
+              <stop offset="0.6" stop-color="#1f6b2e"/>
+              <stop offset="1" stop-color="#123f1c"/>
+            </radialGradient>
+            <radialGradient id="glow" cx="80%" cy="85%" r="45%">
+              <stop offset="0" stop-color="#f26b1d" stop-opacity=".45"/>
+              <stop offset="1" stop-color="#f26b1d" stop-opacity="0"/>
+            </radialGradient>
+            <clipPath id="frame"><rect x="0" y="0" width="560" height="315" rx="16"/></clipPath>
+            <marker id="ah" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#f26b1d"/></marker>
+          </defs>
+          <g clip-path="url(#frame)">
+            <rect width="560" height="315" fill="url(#turf)"/>
+            <rect width="560" height="315" fill="url(#glow)"/>
+            <g stroke="#fff" stroke-opacity=".28" stroke-width="2">
+              <line x1="70" y1="0" x2="70" y2="315"/><line x1="180" y1="0" x2="180" y2="315"/>
+              <line x1="290" y1="0" x2="290" y2="315"/><line x1="400" y1="0" x2="400" y2="315"/><line x1="510" y1="0" x2="510" y2="315"/>
+            </g>
+            <g fill="#fff" fill-opacity=".38" font-size="22" font-weight="500" text-anchor="middle">
+              <text x="180" y="292">30</text><text x="290" y="292">40</text><text x="400" y="292">50</text>
+            </g>
+            <line x1="252" y1="0" x2="252" y2="315" stroke="#fff" stroke-opacity=".55" stroke-width="2" stroke-dasharray="6 6"/>
+            <g fill="none" stroke="#fff" stroke-width="2.5">
+              <circle cx="238" cy="128" r="8"/><circle cx="238" cy="150" r="8"/><circle cx="238" cy="172" r="8"/>
+              <circle cx="238" cy="194" r="8"/><circle cx="238" cy="216" r="8"/><circle cx="214" cy="172" r="8"/>
+              <circle cx="190" cy="172" r="8"/><circle cx="236" cy="72" r="8"/><circle cx="236" cy="262" r="8"/>
+            </g>
+            <g stroke="#fff" stroke-opacity=".8" stroke-width="2.5" stroke-linecap="round">
+              <path d="M262 122l10 10m0-10l-10 10"/><path d="M262 166l10 10m0-10l-10 10"/><path d="M262 210l10 10m0-10l-10 10"/>
+              <path d="M300 144l10 10m0-10l-10 10"/><path d="M300 188l10 10m0-10l-10 10"/><path d="M350 90l10 10m0-10l-10 10"/><path d="M350 240l10 10m0-10l-10 10"/>
+            </g>
+            <path d="M200 176 C 260 180, 300 110, 420 82" fill="none" stroke="#f26b1d" stroke-width="5" stroke-linecap="round" marker-end="url(#ah)"/>
+            <ellipse cx="352" cy="96" rx="26" ry="20" fill="none" stroke="#f26b1d" stroke-width="3"/>
+            <rect x="16" y="16" width="118" height="30" rx="15" fill="#000" fill-opacity=".55"/>
+            <text x="75" y="36" text-anchor="middle" fill="#fff" font-size="13" font-family="Geist Mono, ui-monospace, monospace">0:41.0 · 0.5×</text>
+            <circle cx="516" cy="271" r="22" fill="#fdfcfc"/>
+            <path d="M509 260 L527 271 L509 282 Z" fill="#000"/>
+          </g>
+          <g>
+            <rect x="0" y="331" width="560" height="44" rx="12" fill="#fdfcfc"/>
+            <rect x="12" y="343" width="58" height="20" rx="10" fill="#ebe8e4"/>
+            <text x="41" y="357" text-anchor="middle" font-size="12" font-weight="500" fill="#000">2ª y 6</text>
+            <text x="84" y="358" font-size="14" fill="#000">Play action · Pistol</text>
+            <text x="476" y="358" text-anchor="end" font-size="12" fill="#777169">Primer down</text>
+            <text x="544" y="359" text-anchor="end" font-size="16" fill="#1f6b2e" font-weight="500">+18</text>
+            <rect x="0" y="383" width="560" height="44" rx="12" fill="#fdfcfc" fill-opacity=".7"/>
+            <rect x="12" y="395" width="58" height="20" rx="10" fill="#ebe8e4"/>
+            <text x="41" y="409" text-anchor="middle" font-size="12" font-weight="500" fill="#44403b">3ª y 7</text>
+            <text x="84" y="410" font-size="14" fill="#44403b">Pase corto · Nickel</text>
+            <text x="476" y="410" text-anchor="end" font-size="12" fill="#a59f97">Sack</text>
+            <text x="544" y="411" text-anchor="end" font-size="16" fill="#44403b" font-weight="500">−6</text>
+          </g>
+        </svg>
+      </div>
     </div>
-    <div class="cloudbar">
-      <select id="gamesSel" aria-label="Partidos guardados" hidden><option value="">Partidos guardados…</option></select>
-      <span class="status" id="status">Solo en este navegador</span>
-      <span class="spacer" style="flex:1"></span>
-      <span class="who" id="who"></span>
-      <button class="btn sm" id="teamBtn" hidden>Equipo</button>
-      <button class="btn sm" id="pwBtn" hidden>Contraseña</button>
-      <button class="btn sm" id="logoutBtn" hidden>Salir</button>
+  </section>
+
+  <hr class="rule">
+
+  <section id="que-es">
+    <div class="wrap statement">
+      <div>
+        <p class="eyebrow">Qué es Sideline</p>
+        <h2 class="h1">La sala de video que cabe en el presupuesto de cualquier equipo.</h2>
+      </div>
+      <div class="body">
+        <p>Las plataformas de análisis de video que usan los equipos profesionales cobran en dólares y están pensadas para escuelas de Estados Unidos. La mayoría de los equipos en México terminan viendo el partido en YouTube y mandando notas por WhatsApp.</p>
+        <p>Sideline junta todo en un solo lugar: pegas el enlace del partido, etiquetas cada jugada con down, distancia, formación y resultado, dibujas sobre la pausa y tus jugadores ven los clips desde su celular.</p>
+        <p>Lo hizo un coach para su propio equipo, y ahora está disponible para ligas infantiles, femeniles, flag, prepas y universidades.</p>
+      </div>
     </div>
-  </header>
-  <div class="warn" id="fileWarn" hidden>Esta página está abierta como archivo local y YouTube no permite reproducir videos así (error 153). Súbela a GitHub Pages u otro sitio web y ábrela desde ahí.</div>
+  </section>
 
-  <main>
-    <section class="left">
-      <div class="stagebox" id="stage">
-        <div id="yt"></div>
-        <canvas id="draw"></canvas>
-        <div class="hud" id="hud" hidden><span class="spd" id="hudSpd"></span></div>
-        <div class="drop" id="drop">
-          <div>
-            <strong>Carga el partido desde YouTube</strong>
-            <p>Pega el enlace de la transmisión de la liga (en vivo o ya terminada). El video se ve con el reproductor oficial de YouTube y aquí solo se guardan tus etiquetas.</p>
-            <form class="urlbar" id="urlForm2">
-              <input id="urlInput2" type="url" placeholder="https://www.youtube.com/watch?v=…" aria-label="Enlace de YouTube">
-              <button class="btn primary" type="submit">Cargar</button>
-            </form>
-          </div>
+  <section id="como-funciona" class="band">
+    <div class="wrap">
+      <p class="eyebrow">Cómo funciona</p>
+      <h2 class="h1">Del partido a la junta de video en tres pasos.</h2>
+      <ol class="steps">
+        <li><span class="n">01</span><h3 class="h3">Carga el partido</h3><p>Pega el enlace de YouTube de la transmisión, en vivo o ya terminada. No hay que descargar nada.</p></li>
+        <li><span class="n">02</span><h3 class="h3">Etiqueta cada jugada</h3><p>Marca inicio y fin, down, distancia, formación, tipo de jugada, resultado y yardas. El siguiente down se calcula solo.</p></li>
+        <li><span class="n">03</span><h3 class="h3">Repásalo con tu equipo</h3><p>Proyecta los clips en la junta o comparte el enlace. Cada jugador los ve en su celular con su usuario.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="funciones">
+    <div class="wrap">
+      <p class="eyebrow">Funciones</p>
+      <h2 class="h1">Hecho para la forma en que trabaja un coach.</h2>
+
+      <div class="tabs" role="tablist" aria-label="Funciones de Sideline">
+        <button class="tab" role="tab" id="t-etiquetar" aria-controls="p-etiquetar" aria-selected="true"><span class="dot"></span>Etiquetar</button>
+        <button class="tab" role="tab" id="t-dibujar" aria-controls="p-dibujar" aria-selected="false" tabindex="-1"><span class="dot"></span>Dibujar</button>
+        <button class="tab" role="tab" id="t-compartir" aria-controls="p-compartir" aria-selected="false" tabindex="-1"><span class="dot"></span>Compartir</button>
+      </div>
+
+      <div class="panel" role="tabpanel" id="p-etiquetar" aria-labelledby="t-etiquetar">
+        <div>
+          <h3 class="h2">Cada jugada, con su situación de juego.</h3>
+          <ul>
+            <li>Down, distancia, campo, yarda y hash en cada jugada</li>
+            <li>Formación, tipo de jugada, resultado y jugadores involucrados</li>
+            <li>Filtros por unidad, down y tipo, y búsqueda por notas</li>
+            <li>Yardas totales, promedio por carrera y por pase, y conversión en 3er down</li>
+            <li>Exporta a Excel (.csv) o respalda en .json</li>
+          </ul>
+        </div>
+        <div class="art" aria-hidden="true">
+          <svg viewBox="0 0 420 260" font-family="Inter, system-ui, sans-serif">
+            <text x="0" y="18" font-size="11" fill="#777169" letter-spacing=".04em">JUGADA 12</text>
+            <g font-size="11" fill="#777169">
+              <text x="0" y="52">Down</text><text x="110" y="52">Distancia</text><text x="220" y="52">Campo</text><text x="320" y="52">Hash</text>
+              <text x="0" y="122">Formación</text><text x="220" y="122">Tipo de jugada</text>
+              <text x="0" y="192">Resultado</text><text x="220" y="192">Yardas</text>
+            </g>
+            <g fill="#f5f3f1"><rect x="0" y="60" width="96" height="34" rx="4"/><rect x="110" y="60" width="96" height="34" rx="4"/><rect x="220" y="60" width="86" height="34" rx="4"/><rect x="320" y="60" width="100" height="34" rx="4"/>
+              <rect x="0" y="130" width="206" height="34" rx="4"/><rect x="220" y="130" width="200" height="34" rx="4"/><rect x="0" y="200" width="206" height="34" rx="4"/><rect x="220" y="200" width="200" height="34" rx="4"/></g>
+            <g font-size="14" fill="#000"><text x="12" y="82">3ª</text><text x="122" y="82">4</text><text x="232" y="82">R 38</text><text x="332" y="82">Izq</text>
+              <text x="12" y="152">Shotgun Trips Der</text><text x="232" y="152">Opción / RPO</text><text x="12" y="222">Primer down</text></g>
+            <text x="232" y="222" font-size="14" fill="#1f6b2e" font-weight="500">+9</text>
+          </svg>
         </div>
       </div>
 
-      <div class="timeline" id="timeline" role="slider" aria-label="Línea de tiempo" tabindex="0">
-        <div class="prog" id="prog"></div>
-        <div id="marks"></div>
-        <div class="head" id="head"></div>
-      </div>
-
-      <div class="transport">
-        <button class="btn" id="playBtn"><span id="playLbl">Reproducir</span> <kbd>Espacio</kbd></button>
-        <div class="group">
-          <button class="btn sm" id="back5" title="Atrás 5 s (Shift+←)">−5s</button>
-          <button class="btn sm" id="backF" title="Atrás 0.1 s (←)">◂ 0.1s</button>
-          <button class="btn sm" id="fwdF" title="Adelante 0.1 s (→)">0.1s ▸</button>
-          <button class="btn sm" id="fwd5" title="Adelante 5 s (Shift+→)">+5s</button>
+      <div class="panel" role="tabpanel" id="p-dibujar" aria-labelledby="t-dibujar" hidden>
+        <div>
+          <h3 class="h2">Pausa, dibuja y explica.</h3>
+          <ul>
+            <li>Flechas, líneas, círculos y trazo libre en cuatro colores</li>
+            <li>Guarda el dibujo en la jugada y vuelve a mostrarlo con un clic</li>
+            <li>Cámara lenta de 0.25× a 2× y avance de 0.1 segundos</li>
+            <li>Pantalla completa para proyectar en la junta</li>
+          </ul>
         </div>
-        <div class="group" id="speeds"></div>
-        <span class="tc" id="tc"><b>0:00.0</b> / 0:00.0</span>
-        <span class="spacer"></span>
-        <button class="btn sm" id="fsBtn">Pantalla completa</button>
-      </div>
-
-      <div class="drawbar">
-        <span class="lbl">Pizarrón</span>
-        <button class="btn sm" id="drawToggle">Dibujar <kbd>D</kbd></button>
-        <div class="group" id="tools"></div>
-        <div style="display:flex;gap:6px" id="colors"></div>
-        <button class="btn sm" id="undoBtn">Deshacer <kbd>Z</kbd></button>
-        <button class="btn sm" id="clearBtn">Borrar</button>
-        <span class="spacer"></span>
-        <button class="btn sm" id="saveDrawBtn" disabled>Guardar dibujo en jugada</button>
-      </div>
-      <div class="note">Tip: si haces clic dentro del video, YouTube toma el teclado. Haz clic fuera del video para volver a usar los atajos.</div>
-    </section>
-
-    <aside class="right">
-      <div class="card">
-        <div class="hd">
-          <h2>Jugada <span class="chip" id="selNum">—</span></h2>
-          <span class="spacer"></span>
-          <button class="btn sm primary" id="newBtn">+ Nueva <kbd>N</kbd></button>
-          <button class="btn sm" id="delBtn" disabled>Eliminar</button>
-        </div>
-        <div class="form" id="form" aria-disabled="true">
-          <div class="times">
-            <button class="btn sm" id="setIn">Inicio <kbd>I</kbd></button>
-            <span class="tc" id="inTc">—</span>
-            <button class="btn sm" id="setOut">Fin <kbd>O</kbd></button>
-            <span class="tc" id="outTc">—</span>
-            <span class="spacer"></span>
-            <button class="btn sm" id="clipBtn">Ver clip <kbd>C</kbd></button>
-          </div>
-          <div class="f"><label for="fQ">Cuarto</label><select id="fQ"><option>1</option><option>2</option><option>3</option><option>4</option><option value="TE">TE</option></select></div>
-          <div class="f" style="grid-column: span 3"><label for="fUnit">Unidad</label><select id="fUnit"><option value="O">Ofensiva</option><option value="D">Defensiva</option><option value="ST">Equipos especiales</option></select></div>
-          <div class="f"><label for="fDown">Down</label><select id="fDown"><option value="">—</option><option>1</option><option>2</option><option>3</option><option>4</option></select></div>
-          <div class="f"><label for="fDist">Yardas a avanzar</label><input id="fDist" type="number" min="0" max="99" inputmode="numeric"></div>
-          <div class="f"><label for="fSide">Campo</label><select id="fSide"><option value="P">Propio</option><option value="R">Rival</option></select></div>
-          <div class="f"><label for="fYard">Yarda</label><input id="fYard" type="number" min="1" max="50" inputmode="numeric"></div>
-          <div class="f"><label for="fHash">Hash</label><select id="fHash"><option value="">—</option><option value="I">Izq</option><option value="M">Medio</option><option value="D">Der</option></select></div>
-          <div class="f" style="grid-column: span 3"><label for="fForm">Formación</label><input id="fForm" list="formList" placeholder="Shotgun Trips Der"></div>
-          <div class="f c2"><label for="fType">Tipo de jugada</label><select id="fType"></select></div>
-          <div class="f c2"><label for="fRes">Resultado</label><select id="fRes"></select></div>
-          <div class="f"><label for="fGain">Yardas</label><input id="fGain" type="number" min="-99" max="109" inputmode="numeric"></div>
-          <div class="f" style="grid-column: span 3"><label for="fPlayer">Jugador(es)</label><input id="fPlayer" placeholder="#12, #24"></div>
-          <div class="f c4"><label for="fNotes">Notas para el equipo</label><textarea id="fNotes" placeholder="Qué corregir, qué repetir…"></textarea></div>
+        <div class="art" aria-hidden="true">
+          <svg viewBox="0 0 420 240">
+            <defs><marker id="ah2" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#f26b1d"/></marker>
+              <radialGradient id="turf2" cx="40%" cy="40%" r="80%"><stop offset="0" stop-color="#2f8a45"/><stop offset="1" stop-color="#174f23"/></radialGradient></defs>
+            <rect width="420" height="240" rx="12" fill="url(#turf2)"/>
+            <g stroke="#fff" stroke-opacity=".25" stroke-width="2"><line x1="70" y1="0" x2="70" y2="240"/><line x1="210" y1="0" x2="210" y2="240"/><line x1="350" y1="0" x2="350" y2="240"/></g>
+            <g fill="none" stroke="#fff" stroke-width="2.5"><circle cx="170" cy="80" r="8"/><circle cx="170" cy="104" r="8"/><circle cx="170" cy="128" r="8"/><circle cx="170" cy="152" r="8"/><circle cx="146" cy="128" r="8"/></g>
+            <path d="M150 128 C 190 140, 230 190, 320 196" fill="none" stroke="#f26b1d" stroke-width="5" stroke-linecap="round" marker-end="url(#ah2)"/>
+            <path d="M176 76 C 230 60, 260 40, 330 44" fill="none" stroke="#fdfcfc" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 9"/>
+            <ellipse cx="262" cy="110" rx="30" ry="22" fill="none" stroke="#ffd400" stroke-width="3"/>
+          </svg>
         </div>
       </div>
 
-      <div class="card list">
-        <div class="hd">
-          <h2>Jugadas <span class="chip" id="count">0</span></h2>
-          <span class="spacer"></span>
-          <button class="btn sm" id="loopBtn" title="Repetir el clip seleccionado">Repetir</button>
-          <button class="btn sm" id="chainBtn" title="Al terminar un clip, pasa a la siguiente jugada de la lista">Encadenar</button>
+      <div class="panel" role="tabpanel" id="p-compartir" aria-labelledby="t-compartir" hidden>
+        <div>
+          <h3 class="h2">Tu equipo, al día desde el celular.</h3>
+          <ul>
+            <li>Las jugadas se guardan en la nube automáticamente</li>
+            <li>Cada coach y cada jugador tiene su usuario; los jugadores solo ven</li>
+            <li>Los coaches dan de alta a sus jugadores en un minuto</li>
+            <li>Encadena los clips filtrados para repasar, por ejemplo, todos los terceros downs</li>
+          </ul>
         </div>
-        <div class="filters">
-          <select id="qUnit" aria-label="Filtrar unidad"><option value="">Todas las unidades</option><option value="O">Ofensiva</option><option value="D">Defensiva</option><option value="ST">Eq. especiales</option></select>
-          <select id="qDown" aria-label="Filtrar down"><option value="">Todo down</option><option>1</option><option>2</option><option>3</option><option>4</option></select>
-          <select id="qType" aria-label="Filtrar tipo"><option value="">Todo tipo</option></select>
-          <input id="qText" placeholder="Buscar formación, jugador, nota" aria-label="Buscar">
+        <div class="art" aria-hidden="true">
+          <svg viewBox="0 0 420 260" font-family="Inter, system-ui, sans-serif">
+            <rect x="130" y="0" width="160" height="260" rx="26" fill="#000"/>
+            <rect x="138" y="8" width="144" height="244" rx="20" fill="#fdfcfc"/>
+            <rect x="148" y="22" width="124" height="70" rx="8" fill="#1f6b2e"/>
+            <path d="M203 46 L221 57 L203 68 Z" fill="#fdfcfc"/>
+            <g font-size="10">
+              <rect x="148" y="104" width="124" height="38" rx="8" fill="#f5f3f1"/><text x="158" y="120" fill="#000" font-weight="500">2ª y 6 · Play action</text><text x="158" y="134" fill="#777169">Pistol · #12, #81</text>
+              <rect x="148" y="148" width="124" height="38" rx="8" fill="#f5f3f1"/><text x="158" y="164" fill="#000" font-weight="500">3ª y 4 · RPO</text><text x="158" y="178" fill="#777169">Shotgun · #7</text>
+              <rect x="148" y="192" width="124" height="38" rx="8" fill="#f5f3f1"/><text x="158" y="208" fill="#000" font-weight="500">1ª y 10 · Carrera</text><text x="158" y="222" fill="#777169">I Formation · #24</text>
+            </g>
+            <text x="300" y="120" font-size="12" fill="#777169">Cada jugador</text>
+            <text x="300" y="138" font-size="12" fill="#a59f97">con su usuario</text>
+          </svg>
         </div>
-        <div class="rows" id="rows"></div>
-        <div class="stats" id="stats"></div>
       </div>
-    </aside>
-  </main>
-</div>
+    </div>
+  </section>
 
-<datalist id="formList"></datalist>
-<div class="help" id="help" hidden>
-  <div class="card">
-    <div class="hd"><h2>Atajos de teclado</h2><span class="spacer"></span><button class="btn sm" id="helpClose">Cerrar</button></div>
-    <dl>
-      <dt><kbd>Espacio</kbd></dt><dd>Reproducir / pausar</dd>
-      <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>0.1 segundos atrás / adelante</dd>
-      <dt><kbd>Shift</kbd>+<kbd>←</kbd> <kbd>→</kbd></dt><dd>5 segundos atrás / adelante</dd>
-      <dt><kbd>1</kbd>–<kbd>5</kbd></dt><dd>Velocidad 0.25× · 0.5× · 1× · 1.5× · 2×</dd>
-      <dt><kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Jugada anterior / siguiente</dd>
-      <dt><kbd>N</kbd></dt><dd>Nueva jugada en el momento actual</dd>
-      <dt><kbd>I</kbd> <kbd>O</kbd></dt><dd>Marcar inicio / fin de la jugada</dd>
-      <dt><kbd>C</kbd></dt><dd>Ver el clip de la jugada</dd>
-      <dt><kbd>D</kbd></dt><dd>Activar pizarrón · <kbd>Z</kbd> deshace el último trazo</dd>
-      <dt><kbd>F</kbd></dt><dd>Pantalla completa (para proyectar)</dd>
-    </dl>
+  <hr class="rule">
+
+  <section id="para-quien">
+    <div class="wrap">
+      <p class="eyebrow">Para quién es</p>
+      <h2 class="h1">Para los equipos que juegan por amor al juego.</h2>
+      <div class="rows">
+        <div class="r"><b>Ligas infantiles y juveniles</b><span>Los coaches preparan la semana y los papás pueden ver las jugadas de sus hijos.</span></div>
+        <div class="r"><b>Equipos femeniles</b><span>Análisis serio para un deporte que crece cada temporada.</span></div>
+        <div class="r"><b>Flag football</b><span>Clips cortos y estadísticas simples para un juego rápido.</span></div>
+        <div class="r"><b>Prepas y universidades</b><span>Una herramienta formal sin el costo de una plataforma en dólares.</span></div>
+        <div class="r"><b>Ligas completas</b><span>Un plan para que todos los equipos de la liga trabajen igual.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="preguntas" class="band">
+    <div class="wrap">
+      <p class="eyebrow">Preguntas frecuentes</p>
+      <h2 class="h1">Lo que preguntan los coaches.</h2>
+      <div class="faq">
+        <details><summary>¿Tengo que instalar algo?</summary><p>No. Sideline funciona en el navegador de la computadora, la tablet o el celular.</p></details>
+        <details><summary>¿Mis jugadores necesitan una cuenta?</summary><p>Sí, cada jugador tiene su usuario y contraseña, y solo ve las jugadas de su equipo. Tú los das de alta desde la sala de video y les mandas sus datos por WhatsApp.</p></details>
+        <details><summary>¿Puedo usar la transmisión de mi liga?</summary><p>Sí, si está en YouTube y el canal permite ver sus videos fuera de YouTube. Sideline usa el reproductor oficial y no descarga el video.</p></details>
+        <details><summary>¿Puedo subir mis propios videos?</summary><p>Todavía no; es la siguiente función en camino. Si grabas tus partidos, cuéntanoslo en el cuestionario para avisarte primero.</p></details>
+        <details><summary>¿Cuánto cuesta?</summary><p>Hay planes por temporada en pesos para un equipo y para ligas completas. Llena el cuestionario y te mandamos una propuesta según tu equipo.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="cta">
+        <h2 class="h1">¿Lo quieres probar con tu equipo esta temporada?</h2>
+        <p class="lead">Responde un cuestionario de dos minutos y te contactamos para darte acceso.</p>
+        <div class="actions">
+          <a class="btn btn-fill btn-lg" href="/contacto">Llenar el cuestionario</a>
+          <a class="btn btn-line btn-lg" href="/app/">Ya tengo acceso</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap f">
+    <svg class='brandmark' viewBox='0 0 593 104' height='20' role='img' aria-label='Sideline'><circle cx='52' cy='52' r='50' fill='#000000'/>
+<rect x='48.25' y='8.25' width='7.50' height='7.50' rx='1.35' fill='var(--bg)' transform='rotate(0.0 52.00 12.00)'/>
+<rect x='65.61' y='12.21' width='7.50' height='7.50' rx='1.35' fill='var(--bg)' transform='rotate(25.7 69.36 15.96)'/>
+<rect x='79.52' y='23.31' width='7.50' height='7.50' rx='1.35' fill='var(--bg)' transform='rotate(51.4 83.27 27.06)'/>
+<rect x='87.25' y='39.35' width='7.50' height='7.50' rx='1.35' fill='var(--bg)' transform='rotate(77.1 91.00 43.10)'/>
+<rect x='87.25' y='57.15' width='7.50' height='7.50' rx='1.35' fill='var(--bg)' transform='rotate(102.9 91.00 60.90)'/>
+<rect x='79.52' y='73.19' width='7.50' height='7.50' rx='1.35' fill='var(--bg)' transform='rotate(128.6 83.27 76.94)'/>
+<rect x='65.61' y='84.29' width='7.50' height='7.50' rx='1.35' fill='var(--bg)' transform='rotate(154.3 69.36 88.04)'/>
+<rect x='48.25' y='88.25' width='7.50' height='7.50' rx='1.35' fill='var(--bg)' transform='rotate(180.0 52.00 92.00)'/>
+<rect x='30.89' y='84.29' width='7.50' height='7.50' rx='1.35' fill='var(--bg)' transform='rotate(205.7 34.64 88.04)'/>
+<rect x='16.98' y='73.19' width='7.50' height='7.50' rx='1.35' fill='var(--bg)' transform='rotate(231.4 20.73 76.94)'/>
+<rect x='9.25' y='57.15' width='7.50' height='7.50' rx='1.35' fill='var(--bg)' transform='rotate(257.1 13.00 60.90)'/>
+<rect x='9.25' y='39.35' width='7.50' height='7.50' rx='1.35' fill='var(--bg)' transform='rotate(282.9 13.00 43.10)'/>
+<rect x='16.98' y='23.31' width='7.50' height='7.50' rx='1.35' fill='var(--bg)' transform='rotate(308.6 20.73 27.06)'/>
+<rect x='30.89' y='12.21' width='7.50' height='7.50' rx='1.35' fill='var(--bg)' transform='rotate(334.3 34.64 15.96)'/>
+<circle cx='52' cy='52' r='31.00' fill='var(--bg)'/>
+<circle cx='52' cy='52' r='25.00' fill='none' stroke='#000000' stroke-width='3.75'/>
+<path d='M42.25 39.00 L65.65 52.00 L42.25 65.00 Z' fill='#F26B1D' stroke='#F26B1D' stroke-width='2.50' stroke-linejoin='round'/><g transform='translate(128 85)'><path d='M3.588 -13.34Q28.796 -11.959999999999999 37.72 -11.959999999999999Q39.836 -11.959999999999999 41.078 -13.201999999999998Q42.32 -14.443999999999999 42.32 -16.56V-24.84H21.16Q11.5 -24.84 7.13 -29.21Q2.76 -33.58 2.76 -43.24V-46.0Q2.76 -55.66 7.13 -60.03Q11.5 -64.4 21.16 -64.4H53.452V-51.519999999999996H24.84Q19.32 -51.519999999999996 19.32 -46.0V-44.16Q19.32 -38.64 24.84 -38.64H41.4Q50.416 -38.64 54.647999999999996 -34.408Q58.879999999999995 -30.176 58.879999999999995 -21.16V-16.56Q58.879999999999995 -7.544 54.647999999999996 -3.312Q50.416 0.9199999999999999 41.4 0.9199999999999999Q36.708 0.9199999999999999 31.464 0.736L23.0 0.368Q13.616 -0.092 3.588 -0.9199999999999999ZM99.36000000000001 0.0H66.24000000000001V-12.879999999999999H74.52000000000001V-51.519999999999996H66.24000000000001V-64.4H99.36000000000001V-51.519999999999996H91.08V-12.879999999999999H99.36000000000001ZM145.36 -64.4Q155.756 -64.4 161.138 -59.018Q166.52 -53.635999999999996 166.52 -43.24V-21.16Q166.52 -10.764 161.138 -5.382Q155.756 0.0 145.36 0.0H109.48V-64.4ZM149.96 -43.24Q149.96 -51.519999999999996 141.68 -51.519999999999996H126.04V-12.879999999999999H141.68Q149.96 -12.879999999999999 149.96 -21.16ZM228.62 0.0H177.56000000000003V-64.4H228.62V-51.519999999999996H194.12V-39.1H221.26000000000002V-26.22H194.12V-12.879999999999999H228.62ZM254.38 -12.879999999999999H287.96000000000004V0.0H237.82000000000002V-64.4H254.38ZM326.6 0.0H293.48V-12.879999999999999H301.76000000000005V-51.519999999999996H293.48V-64.4H326.6V-51.519999999999996H318.32000000000005V-12.879999999999999H326.6ZM392.84000000000003 0.0H375.36L353.28000000000003 -38.64V0.0H336.72V-64.4H354.20000000000005L376.28000000000003 -25.759999999999998V-64.4H392.84000000000003ZM456.78000000000003 0.0H405.72V-64.4H456.78000000000003V-51.519999999999996H422.28000000000003V-39.1H449.4200000000001V-26.22H422.28000000000003V-12.879999999999999H456.78000000000003Z' fill='#000000'/></g></svg>
+    <small>© 2026 Sideline · Hecho en México</small>
+    <nav aria-label="Pie de página"><a href="/">Inicio</a><a href="/contacto">Contacto</a><a href="/app/">Ingresar</a></nav>
   </div>
-</div>
-<div class="toast" id="toast" hidden></div>
+</footer>
 
-<div class="gate" id="gate" hidden>
-  <form class="card" id="loginForm" autocomplete="on">
-    <a href="/" aria-label="Sideline, inicio" id="gateLogo"></a>
-    <h2>Entrar a Sideline</h2>
-    <div class="lf"><label for="lUser">Usuario</label><input id="lUser" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>
-    <div class="lf"><label for="lPass">Contraseña</label><input id="lPass" name="password" type="password" autocomplete="current-password" required></div>
-    <p class="lerr" id="lErr" hidden></p>
-    <button class="btn primary" type="submit" id="lBtn">Entrar</button>
-    <p>¿Eres jugador y no tienes usuario? Pídeselo a tu coach.<br>¿Tu equipo aún no usa Sideline? <a href="/contacto">Solicita acceso</a>.</p>
-  </form>
-</div>
-
-<div class="modal" id="pwModal" hidden>
-  <form class="card" id="pwForm">
-    <div class="hd"><h2 id="pwTitle">Cambiar contraseña</h2><span class="spacer"></span><button type="button" class="btn sm" id="pwClose">Cerrar</button></div>
-    <div class="body">
-      <p class="note" id="pwNote" hidden>Es tu primera vez. Cambia la contraseña temporal por una tuya, de al menos 8 caracteres.</p>
-      <div class="lf"><label for="pwCur">Contraseña actual</label><input id="pwCur" type="password" autocomplete="current-password" required></div>
-      <div class="lf"><label for="pwNew">Nueva contraseña</label><input id="pwNew" type="password" autocomplete="new-password" minlength="8" required></div>
-      <div class="lf"><label for="pwNew2">Repite la nueva contraseña</label><input id="pwNew2" type="password" autocomplete="new-password" minlength="8" required></div>
-      <p class="lerr" id="pwErr" hidden></p>
-      <div><button class="btn primary" type="submit">Guardar contraseña</button></div>
-    </div>
-  </form>
-</div>
-
-<div class="modal" id="teamModal" hidden>
-  <div class="card">
-    <div class="hd"><h2 id="teamTitle">Equipo</h2><span class="spacer"></span><button type="button" class="btn sm" id="teamClose">Cerrar</button></div>
-    <div class="body">
-      <form class="userform" id="userForm">
-        <div class="lf"><label for="uName">Nombre</label><input id="uName" placeholder="Juan Pérez" required maxlength="80"></div>
-        <div class="lf"><label for="uUser">Usuario</label><input id="uUser" placeholder="juan.perez" required maxlength="32" autocapitalize="none" spellcheck="false"></div>
-        <div class="lf"><label for="uRole">Rol</label><select id="uRole"><option value="player">Jugador</option><option value="coach">Coach</option></select></div>
-        <button class="btn primary" type="submit">Agregar</button>
-      </form>
-      <p class="lerr" id="uErr" hidden></p>
-      <div class="creds" id="creds" hidden></div>
-      <div style="overflow-x:auto"><table class="users"><thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th></th></tr></thead><tbody id="uRows"></tbody></table></div>
-      <p class="note">Los jugadores solo ven las jugadas. Los coaches pueden editar y administrar el equipo. Si alguien olvida su contraseña, usa «Nueva contraseña» y compártele la temporal.</p>
-    </div>
-  </div>
-</div>
-
-<script src="https://www.youtube.com/iframe_api"></script>
 <script>
 (() => {
-const $ = id => document.getElementById(id);
-const cv = $('draw'), ctx = cv.getContext('2d');
-const STEP = 0.1;
-const SPEEDS = [0.25, 0.5, 1, 1.5, 2];
-const TYPES = ['Carrera interior', 'Carrera exterior', 'Pase corto', 'Pase medio', 'Pase profundo', 'Play action', 'Pantalla', 'Opción / RPO', 'QB sneak', 'Despeje', 'Gol de campo', 'Patada inicial', 'Punto extra', 'Conversión 2 pts'];
-const RESULTS = ['', 'Ganancia', 'Primer down', 'Touchdown', 'Completo', 'Incompleto', 'Sin ganancia', 'Pérdida', 'Sack', 'Intercepción', 'Fumble', 'Castigo', 'Bueno', 'Fallado', 'Bloqueado'];
-const FORMS = ['Shotgun', 'Shotgun Trips Der', 'Shotgun Trips Izq', 'Pistol', 'I Formation', 'Singleback', 'Empty', 'Bajo centro', '4-3', '3-4', 'Nickel', 'Dime', 'Gol line'];
-const UNIT_COLOR = { O: 'var(--off)', D: 'var(--def)', ST: 'var(--st)' };
-const UNIT_NAME = { O: 'Ofensiva', D: 'Defensiva', ST: 'Eq. esp.' };
-const COLORS = ['#ffd400', '#ff4040', '#ffffff', '#33d6ff'];
-const TOOLS = [['arrow', 'Flecha'], ['line', 'Línea'], ['circle', 'Círculo'], ['pen', 'Libre']];
-
-const S = {
-  plays: [], sel: null, key: null, example: true, vid: null,
-  clip: false, loop: false, chain: false, keepDrawUntil: 0,
-  draw: false, tool: 'arrow', color: COLORS[0], strokes: [], cur: null, rate: 1,
-};
-
-if (location.protocol === 'file:') $('fileWarn').hidden = false;
-
-S.plays = [
-  { id: 'e1', start: 12, end: 20, q: '1', unit: 'O', down: '1', dist: 10, side: 'P', yard: 25, hash: 'M', form: 'Shotgun Trips Der', type: 'Carrera interior', res: 'Ganancia', gain: 4, player: '#24', notes: 'Buen bloqueo del guardia izquierdo.', ex: true },
-  { id: 'e2', start: 41, end: 49, q: '1', unit: 'O', down: '2', dist: 6, side: 'P', yard: 29, hash: 'D', form: 'Pistol', type: 'Play action', res: 'Primer down', gain: 18, player: '#12, #81', notes: 'El safety mordió la finta.', ex: true },
-  { id: 'e3', start: 77, end: 84, q: '1', unit: 'D', down: '3', dist: 7, side: 'R', yard: 38, hash: 'I', form: 'Nickel', type: 'Pase corto', res: 'Sack', gain: -6, player: '#55', notes: 'Blitz por el lado débil.', ex: true },
-];
-
-// ---------- YouTube player wrapper ----------
-let yt = null, ready = false, apiReady = false, pendingId = null;
-const P = {
-  get t() { try { return ready ? yt.getCurrentTime() || 0 : 0; } catch (e) { return 0; } },
-  get d() { try { return ready ? yt.getDuration() || 0 : 0; } catch (e) { return 0; } },
-  get paused() { try { return !ready || yt.getPlayerState() !== 1; } catch (e) { return true; } },
-  get ok() { return ready; },
-  play() { if (ready) yt.playVideo(); },
-  pause() { if (ready) yt.pauseVideo(); },
-  seek(t) { if (!ready) return; const d = this.d; t = Math.max(0, d ? Math.min(d - 0.05, t) : t); yt.seekTo(t, true); },
-  rate(r) { if (ready) yt.setPlaybackRate(r); },
-};
-window.onYouTubeIframeAPIReady = () => { apiReady = true; if (pendingId && !yt) createPlayer(pendingId); };
-function createPlayer(id) {
-  const vars = { rel: 0, playsinline: 1, modestbranding: 1 };
-  if (location.protocol.startsWith('http')) vars.origin = location.origin;
-  yt = new YT.Player('yt', {
-    videoId: id, playerVars: vars,
-    events: {
-      onReady: () => { ready = true; P.rate(S.rate); grabTitle(); renderAll(); },
-      onStateChange: e => {
-        updPlay();
-        if (e.data === 1 && Date.now() > S.keepDrawUntil) { if (S.strokes.length) { S.strokes = []; redraw(); } if (S.draw) setDraw(false); }
-        if (e.data === 1) { P.rate(S.rate); grabTitle(); }
-      },
-      onError: e => {
-        const msg = { 2: 'El enlace no es válido.', 5: 'El video no se puede reproducir aquí.', 100: 'El video no existe o es privado.', 101: 'El dueño del video no permite verlo fuera de YouTube.', 150: 'El dueño del video no permite verlo fuera de YouTube.', 153: 'Abre esta página desde un sitio web (no como archivo local).' }[e.data];
-        toast(msg || 'YouTube no pudo cargar el video.');
-      },
-    },
+  const tabs = [...document.querySelectorAll('[role="tab"]')];
+  function pick(t) {
+    tabs.forEach(x => {
+      const on = x === t;
+      x.setAttribute('aria-selected', on);
+      x.tabIndex = on ? 0 : -1;
+      document.getElementById(x.getAttribute('aria-controls')).hidden = !on;
+    });
+  }
+  tabs.forEach((t, i) => {
+    t.addEventListener('click', () => pick(t));
+    t.addEventListener('keydown', e => {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      const n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+      pick(n); n.focus();
+    });
   });
-}
-function grabTitle() { try { const d = yt.getVideoData(); if (d && d.title) { const was = S.title; S.title = d.title; $('fileName').textContent = d.title; if (!was && cloud.on && cloud.ok && S.plays.length) { cloud.lastTouch = 0; touchVideo(); } } } catch (e) {} }
-function parseId(u) {
-  u = (u || '').trim();
-  if (/^[\w-]{11}$/.test(u)) return u;
-  try {
-    const url = new URL(u);
-    if (url.hostname.includes('youtu.be')) return url.pathname.slice(1, 12);
-    if (url.searchParams.get('v')) return url.searchParams.get('v').slice(0, 11);
-    const m = url.pathname.match(/\/(live|embed|shorts|v)\/([\w-]{11})/);
-    if (m) return m[2];
-  } catch (e) {}
-  return null;
-}
-function loadUrl(u) {
-  const id = parseId(u);
-  if (!id) { toast('No reconozco ese enlace. Copia el enlace completo del video de YouTube.'); return; }
-  S.vid = id;
-  $('drop').hidden = true; $('hud').hidden = false;
-  $('fileName').textContent = 'YouTube · ' + id;
-  $('urlInput').value = 'https://www.youtube.com/watch?v=' + id;
-  S.key = 'salavideo-yt:' + (cloud.team ? cloud.team.id + ':' : '') + id;
-  let saved = null;
-  try { saved = JSON.parse(localStorage.getItem(S.key) || 'null'); localStorage.setItem('salavideo-yt:last', id); } catch (e) {}
-  S.plays = Array.isArray(saved) ? saved : [];
-  S.example = false; S.sel = null; S.strokes = []; S.clip = false; S.title = '';
-  dirty.clear(); timers.forEach(clearTimeout); timers.clear();
-  try { history.replaceState(null, '', location.pathname + '?v=' + id); } catch (e) {}
-  if (cloud.on) { subscribe(id); const gs = $('gamesSel'); if ([...gs.options].some(o => o.value === id)) gs.value = id; }
-  if (yt && ready) yt.cueVideoById(id);
-  else if (apiReady) { if (!yt) createPlayer(id); }
-  else pendingId = id;
-  renderAll();
-  if (!cloud.on && saved && saved.length) toast(`Se recuperaron ${saved.length} jugadas de este video.`);
-}
-$('urlForm').onsubmit = e => { e.preventDefault(); loadUrl($('urlInput').value); };
-$('urlForm2').onsubmit = e => { e.preventDefault(); loadUrl($('urlInput2').value); };
-$('shareBtn').onclick = async () => {
-  if (!S.vid) return toast('Primero carga un video.');
-  const link = location.origin + location.pathname + '?v=' + S.vid;
-  try { await navigator.clipboard.writeText(link); toast('Enlace copiado. Las etiquetas se comparten aparte con «Exportar .json».'); }
-  catch (e) { toast(link); }
-};
-
-// ---------- helpers ----------
-const fmt = t => { if (!isFinite(t)) t = 0; const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + s.toFixed(1).padStart(4, '0'); };
-const uid = () => Math.random().toString(36).slice(2, 9);
-const sorted = () => [...S.plays].sort((a, b) => a.start - b.start);
-const selPlay = () => S.plays.find(p => p.id === S.sel) || null;
-const numOf = p => sorted().indexOf(p) + 1;
-let toastT;
-function toast(msg) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3200); }
-function ddText(p) { return p.down ? `${p.down}ª y ${p.dist ?? '?'}` : '—'; }
-function posText(p) { if (!p.yard) return ''; return p.yard >= 50 ? '50' : (p.side === 'P' ? 'P' : 'R') + p.yard; }
-function cacheLocal() { if (!S.key) return; try { localStorage.setItem(S.key, JSON.stringify(S.plays)); } catch (e) {} }
-
-// ---------- cloud (Cloudflare D1 vía /api) ----------
-const cloud = { on: false, ok: false, user: null, team: null, poll: null, games: null, lastTouch: 0, unloading: false };
-const dirty = new Map(), timers = new Map(), deleted = new Map();
-function canEdit() { return !cloud.on || cloud.ok; }
-function setStatus(text, kind) { const s = $('status'); s.textContent = text; s.className = 'status' + (kind ? ' ' + kind : ''); }
-function needEdit() {
-  if (canEdit()) return true;
-  toast('Solo los coaches pueden editar. Tu usuario es de jugador.');
-  return false;
-}
-async function api(path, opts = {}) {
-  const headers = { 'content-type': 'application/json' };
-  const res = await fetch('/api/' + path, { ...opts, headers, credentials: 'same-origin', keepalive: !!cloud.unloading });
-  let body = null; try { body = await res.json(); } catch (e) {}
-  if (!res.ok) {
-    const err = new Error((body && body.message) || (body && body.error) || ('http_' + res.status)); err.status = res.status; err.body = body;
-    if (res.status === 401 && cloud.user && path !== 'login') sessionEnded();
-    throw err;
-  }
-  return body;
-}
-function cleanPlay(p) { const o = JSON.parse(JSON.stringify(p)); delete o.id; delete o.ex; return o; }
-function sessionEnded() {
-  cloud.user = null; cloud.team = null; cloud.ok = false;
-  clearInterval(cloud.poll);
-  showGate('Tu sesión terminó. Vuelve a entrar.');
-}
-function cloudError(e) {
-  if (e && e.status === 401) { setStatus('No se guardó', 'bad'); return; }
-  if (e && e.status === 403) { setStatus('No se guardó', 'bad'); toast('Solo los coaches pueden editar.'); return; }
-  setStatus('No se guardó · reintenta', 'bad');
-  toast(e && e.status === 413 ? 'El dibujo es demasiado grande para guardarse.' : 'No se pudo guardar en la nube. Revisa tu conexión.');
-}
-function touchVideo() {
-  if (!cloud.on || !cloud.ok || !S.vid || !S.title || Date.now() - cloud.lastTouch < 20000) return;
-  cloud.lastTouch = Date.now();
-  api('videos', { method: 'POST', body: JSON.stringify({ id: S.vid, title: S.title }) }).then(loadGames).catch(() => {});
-}
-function flush(id) {
-  timers.delete(id);
-  const p = dirty.get(id), vid = S.vid; if (!p || !vid) return;
-  api('plays', { method: 'POST', body: JSON.stringify({ video: vid, id, data: cleanPlay(p) }) })
-    .then(() => { if (!timers.has(id)) dirty.delete(id); if (!timers.size) setStatus('Guardado en la nube', 'ok'); touchVideo(); })
-    .catch(e => { if (e.status === 401) dirty.delete(id); cloudError(e); });
-}
-// save one play (or everything when no play is given)
-function save(p) {
-  cacheLocal();
-  if (!cloud.on || !cloud.ok) return;
-  const list = p ? [p] : S.plays;
-  list.forEach((x, i) => {
-    if (x.ex) return;
-    dirty.set(x.id, x);
-    clearTimeout(timers.get(x.id));
-    timers.set(x.id, setTimeout(() => flush(x.id), p ? 700 : 80 * i));
-  });
-  setStatus('Guardando…', 'busy');
-}
-function removePlay(p) {
-  S.plays = S.plays.filter(x => x !== p);
-  cacheLocal();
-  if (!cloud.on) return;
-  clearTimeout(timers.get(p.id)); timers.delete(p.id); dirty.delete(p.id);
-  deleted.set(p.id, Date.now());
-  setStatus('Guardando…', 'busy');
-  api(`plays?v=${encodeURIComponent(S.vid)}&id=${encodeURIComponent(p.id)}`, { method: 'DELETE' })
-    .then(() => setStatus('Guardado en la nube', 'ok')).catch(cloudError);
-}
-async function fetchPlays(id, first) {
-  try {
-    const r = await api('plays?v=' + encodeURIComponent(id));
-    if (S.vid !== id) return;
-    const now = Date.now();
-    deleted.forEach((t, k) => { if (now - t > 30000) deleted.delete(k); });
-    const server = (r.plays || []).filter(p => !deleted.has(p.id));
-    const merged = server.map(p => dirty.get(p.id) || S.plays.find(x => x.id === p.id && JSON.stringify(cleanPlay(x)) === JSON.stringify(cleanPlay(p))) || p);
-    dirty.forEach((p, k) => { if (!server.some(x => x.id === k)) merged.push(p); });
-    const changed = JSON.stringify(merged.map(cleanPlay)) !== JSON.stringify(S.plays.map(cleanPlay)) || merged.length !== S.plays.length;
-    S.plays = merged; S.example = false;
-    if (S.sel && !S.plays.some(p => p.id === S.sel)) S.sel = null;
-    if (changed || first) { renderAll(); cacheLocal(); }
-    if (!timers.size) setStatus('Guardado en la nube', 'ok');
-    if (first && server.length) toast(`Se cargaron ${server.length} jugadas desde la nube.`);
-  } catch (e) { setStatus('Sin conexión a la base de datos', 'bad'); }
-}
-function subscribe(id) {
-  if (!cloud.on) return;
-  clearInterval(cloud.poll);
-  setStatus('Conectando…', 'busy');
-  fetchPlays(id, true);
-  cloud.poll = setInterval(() => { if (!document.hidden && S.vid === id) fetchPlays(id, false); }, 8000);
-}
-async function loadGames() {
-  if (!cloud.on) return;
-  try {
-    const r = await api('videos'), gs = $('gamesSel');
-    gs.innerHTML = '<option value="">Partidos guardados…</option>' + (r.videos || []).map(v => `<option value="${esc(v.id)}">${esc(v.title || v.id)}</option>`).join('');
-    gs.value = (r.videos || []).some(v => v.id === S.vid) ? S.vid : '';
-  } catch (e) {}
-}
-function paintAuth() {
-  if (!cloud.on) return;
-  const on = !!cloud.user;
-  $('logoutBtn').hidden = !on; $('pwBtn').hidden = !on;
-  $('teamBtn').hidden = !(on && cloud.ok);
-  $('who').textContent = on ? `${cloud.user.name} · ${cloud.ok ? 'Coach' : 'Jugador'} · ${cloud.team.name}` : '';
-}
-function gateLogo() { const h = document.querySelector('.brand h1 .brandmark'); if (h && !$('gateLogo').firstChild) $('gateLogo').appendChild(h.cloneNode(true)); }
-function showGate(msg) {
-  gateLogo();
-  $('gate').hidden = false;
-  $('lErr').textContent = msg || ''; $('lErr').hidden = !msg;
-  setTimeout(() => $('lUser').focus(), 30);
-}
-async function signedIn(d, fresh) {
-  cloud.user = d.user; cloud.team = d.team; cloud.ok = d.user.role === 'coach';
-  $('gate').hidden = true;
-  $('gamesSel').hidden = false;
-  paintAuth();
-  if (S.vid) {
-    S.key = 'salavideo-yt:' + cloud.team.id + ':' + S.vid;
-    let saved = null; try { saved = JSON.parse(localStorage.getItem(S.key) || 'null'); } catch (e) {}
-    S.plays = Array.isArray(saved) ? saved : []; S.sel = null; renderAll();
-    subscribe(S.vid);
-  } else { S.plays = []; S.example = false; S.sel = null; setStatus('Conectado', 'ok'); }
-  loadGames();
-  renderAll();
-  if (d.user.must_change) openPw(true);
-  else if (fresh) toast(`Hola, ${d.user.name.split(' ')[0]}.`);
-}
-$('loginForm').onsubmit = async e => {
-  e.preventDefault();
-  const username = $('lUser').value.trim().toLowerCase(), password = $('lPass').value;
-  if (!username || !password) return;
-  $('lBtn').disabled = true; $('lErr').hidden = true;
-  try {
-    const d = await api('login', { method: 'POST', body: JSON.stringify({ username, password }) });
-    $('lPass').value = '';
-    await signedIn(d, true);
-  } catch (err) {
-    $('lErr').textContent = err.status === 401 || err.status === 429 ? err.message : 'No se pudo entrar. Revisa tu conexión.';
-    $('lErr').hidden = false;
-  } finally { $('lBtn').disabled = false; }
-};
-$('logoutBtn').onclick = async () => {
-  try { await api('logout', { method: 'POST' }); } catch (e) {}
-  location.href = '/app/';
-};
-// password
-function openPw(forced) {
-  $('pwModal').hidden = false; $('pwErr').hidden = true;
-  $('pwNote').hidden = !forced; $('pwClose').hidden = !!forced;
-  $('pwTitle').textContent = forced ? 'Crea tu contraseña' : 'Cambiar contraseña';
-  ['pwCur', 'pwNew', 'pwNew2'].forEach(id => $(id).value = '');
-  setTimeout(() => $('pwCur').focus(), 30);
-}
-$('pwBtn').onclick = () => openPw(false);
-$('pwClose').onclick = () => $('pwModal').hidden = true;
-$('pwForm').onsubmit = async e => {
-  e.preventDefault();
-  const err = m => { $('pwErr').textContent = m; $('pwErr').hidden = false; };
-  if ($('pwNew').value.length < 8) return err('La nueva contraseña debe tener al menos 8 caracteres.');
-  if ($('pwNew').value !== $('pwNew2').value) return err('Las dos contraseñas nuevas no coinciden.');
-  try {
-    await api('password', { method: 'POST', body: JSON.stringify({ current: $('pwCur').value, new: $('pwNew').value }) });
-    $('pwModal').hidden = true; cloud.user.must_change = false; toast('Contraseña guardada.');
-  } catch (x) { err(x.body && x.body.message ? x.body.message : 'No se pudo guardar. Revisa tu conexión.'); }
-};
-// team management (coaches)
-const ROLE = { coach: 'Coach', player: 'Jugador' };
-let delUser = null;
-async function loadUsers() {
-  try {
-    const r = await api('team/users');
-    $('uRows').innerHTML = (r.users || []).map(u => `<tr><td>${esc(u.name)}${u.id === cloud.user.id ? ' <span class="note">(tú)</span>' : ''}</td><td><code>${esc(u.username)}</code></td><td>${ROLE[u.role] || u.role}${u.must_change ? ' <span class="note">· sin estrenar</span>' : ''}</td>
-      <td class="act">${u.id === cloud.user.id ? '' : `<button class="btn sm" data-reset="${esc(u.id)}" data-name="${esc(u.username)}">Nueva contraseña</button> <button class="btn sm" data-del="${esc(u.id)}">${delUser === u.id ? '¿Seguro?' : 'Dar de baja'}</button>`}</td></tr>`).join('');
-  } catch (e) { $('uErr').textContent = e.message; $('uErr').hidden = false; }
-}
-function showCreds(username, temp, label) {
-  const msg = `Sideline · ${cloud.team.name}\nEntra en ${location.origin}/app/\nUsuario: ${username}\nContraseña temporal: ${temp}`;
-  $('creds').hidden = false;
-  $('creds').innerHTML = `<b>${esc(label)}</b><br>Usuario <code>${esc(username)}</code> · Contraseña temporal <code>${esc(temp)}</code><br><span class="note">Al entrar le pedirá crear su propia contraseña.</span><br><button class="btn sm" id="copyCreds" style="margin-top:8px">Copiar mensaje para WhatsApp</button>`;
-  $('copyCreds').onclick = async () => { try { await navigator.clipboard.writeText(msg); toast('Mensaje copiado.'); } catch (e) { toast('No se pudo copiar; cópialo a mano.'); } };
-}
-$('teamBtn').onclick = () => { $('teamModal').hidden = false; $('teamTitle').textContent = 'Equipo · ' + cloud.team.name; $('creds').hidden = true; $('uErr').hidden = true; delUser = null; loadUsers(); };
-$('teamClose').onclick = () => $('teamModal').hidden = true;
-$('uName').addEventListener('input', () => {
-  if ($('uUser').dataset.touched) return;
-  $('uUser').value = $('uName').value.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim().replace(/\s+/g, '.').replace(/[^a-z0-9._-]/g, '').slice(0, 32);
-});
-$('uUser').addEventListener('input', () => { $('uUser').dataset.touched = '1'; });
-$('userForm').onsubmit = async e => {
-  e.preventDefault(); $('uErr').hidden = true;
-  try {
-    const r = await api('team/users', { method: 'POST', body: JSON.stringify({ name: $('uName').value, username: $('uUser').value, role: $('uRole').value }) });
-    showCreds(r.user.username, r.temp_password, `${ROLE[r.user.role]} agregado: ${r.user.name}`);
-    $('uName').value = ''; $('uUser').value = ''; delete $('uUser').dataset.touched;
-    loadUsers();
-  } catch (x) { $('uErr').textContent = x.message; $('uErr').hidden = false; }
-};
-$('uRows').addEventListener('click', async e => {
-  const b = e.target.closest('button'); if (!b) return;
-  if (b.dataset.reset) {
-    try { const r = await api('team/users/reset', { method: 'POST', body: JSON.stringify({ id: b.dataset.reset }) }); showCreds(b.dataset.name, r.temp_password, 'Contraseña restablecida'); loadUsers(); }
-    catch (x) { $('uErr').textContent = x.message; $('uErr').hidden = false; }
-  } else if (b.dataset.del) {
-    if (delUser !== b.dataset.del) { delUser = b.dataset.del; loadUsers(); return; }
-    try { await api('team/users?id=' + encodeURIComponent(b.dataset.del), { method: 'DELETE' }); delUser = null; toast('Usuario dado de baja.'); loadUsers(); }
-    catch (x) { $('uErr').textContent = x.message; $('uErr').hidden = false; }
-  }
-});
-$('gamesSel').onchange = () => { const v = $('gamesSel').value; if (v) loadUrl(v); };
-window.addEventListener('beforeunload', e => {
-  cacheLocal();
-  if (timers.size) { cloud.unloading = true; [...timers.keys()].forEach(id => { clearTimeout(timers.get(id)); flush(id); }); e.preventDefault(); e.returnValue = ''; }
-});
-// detect the database, then the session
-fetch('/api/health', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(async h => {
-  if (!h || !h.ok) return;
-  if (!h.db) { setStatus('Base de datos no conectada', 'bad'); return; }
-  cloud.on = true;
-  S.plays = []; S.example = false; S.sel = null; renderAll();
-  try { await signedIn(await api('me'), false); }
-  catch (e) { showGate(''); }
-}).catch(() => {});
-
-// ---------- static controls ----------
-SPEEDS.forEach((s, i) => { const b = document.createElement('button'); b.className = 'btn sm'; b.textContent = s + '×'; b.dataset.s = s; b.title = 'Tecla ' + (i + 1); b.onclick = () => setSpeed(s); $('speeds').append(b); });
-TOOLS.forEach(([k, n]) => { const b = document.createElement('button'); b.className = 'btn sm'; b.textContent = n; b.dataset.t = k; b.onclick = () => { S.tool = k; setDraw(true); paintTools(); }; $('tools').append(b); });
-COLORS.forEach(c => { const b = document.createElement('button'); b.className = 'sw'; b.style.background = c; b.dataset.c = c; b.setAttribute('aria-label', 'Color ' + c); b.onclick = () => { S.color = c; setDraw(true); paintTools(); }; $('colors').append(b); });
-TYPES.forEach(t => { $('fType').add(new Option(t, t)); $('qType').add(new Option(t, t)); });
-$('fType').insertBefore(new Option('—', ''), $('fType').firstChild);
-RESULTS.forEach(r => $('fRes').add(new Option(r || '—', r)));
-FORMS.forEach(f => { const o = document.createElement('option'); o.value = f; $('formList').append(o); });
-
-function paintTools() {
-  [...$('tools').children].forEach(b => b.classList.toggle('on', S.draw && b.dataset.t === S.tool));
-  [...$('colors').children].forEach(b => b.classList.toggle('on', b.dataset.c === S.color));
-  $('drawToggle').classList.toggle('on', S.draw);
-  cv.classList.toggle('active', S.draw);
-  cv.style.pointerEvents = S.draw ? 'auto' : 'none';
-  $('saveDrawBtn').disabled = !(selPlay() && S.strokes.length && canEdit());
-}
-function setSpeed(s) {
-  S.rate = s; P.rate(s);
-  [...$('speeds').children].forEach(b => b.classList.toggle('on', +b.dataset.s === s));
-  $('hudSpd').textContent = s + '×';
-  $('hudSpd').hidden = s === 1;
-}
-setSpeed(1);
-
-// ---------- canvas ----------
-const stage = $('stage');
-function layoutCanvas() {
-  const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
-  cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
-  redraw();
-}
-new ResizeObserver(layoutCanvas).observe(stage);
-
-function redraw() {
-  ctx.clearRect(0, 0, cv.width, cv.height);
-  const all = S.cur ? [...S.strokes, S.cur] : S.strokes;
-  const W = cv.width, H = cv.height, lw = Math.max(3, W / 260);
-  for (const s of all) {
-    ctx.strokeStyle = s.color; ctx.fillStyle = s.color; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = lw;
-    const Pt = s.pts.map(([x, y]) => [x * W, y * H]);
-    if (!Pt.length) continue;
-    const [x0, y0] = Pt[0], [x1, y1] = Pt[Pt.length - 1];
-    ctx.beginPath();
-    if (s.type === 'pen') { Pt.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); }
-    else if (s.type === 'circle') { ctx.ellipse((x0 + x1) / 2, (y0 + y1) / 2, Math.abs(x1 - x0) / 2, Math.abs(y1 - y0) / 2, 0, 0, Math.PI * 2); ctx.stroke(); }
-    else {
-      ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
-      if (s.type === 'arrow' && Math.hypot(x1 - x0, y1 - y0) > 4) {
-        const ang = Math.atan2(y1 - y0, x1 - x0), L = lw * 5;
-        ctx.beginPath(); ctx.moveTo(x1, y1);
-        ctx.lineTo(x1 - L * Math.cos(ang - 0.45), y1 - L * Math.sin(ang - 0.45));
-        ctx.lineTo(x1 - L * Math.cos(ang + 0.45), y1 - L * Math.sin(ang + 0.45));
-        ctx.closePath(); ctx.fill();
-      }
-    }
-  }
-  ctx.shadowBlur = 0;
-}
-function ptOf(e) { const r = cv.getBoundingClientRect(); return [Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))]; }
-cv.addEventListener('pointerdown', e => {
-  if (!S.draw) return;
-  P.pause(); S.clip = false;
-  cv.setPointerCapture(e.pointerId);
-  const p = ptOf(e); S.cur = { type: S.tool, color: S.color, pts: [p, p] }; redraw();
-});
-cv.addEventListener('pointermove', e => { if (!S.cur) return; const p = ptOf(e); if (S.cur.type === 'pen') S.cur.pts.push(p); else S.cur.pts[1] = p; redraw(); });
-const endStroke = () => { if (!S.cur) return; S.strokes.push(S.cur); S.cur = null; redraw(); paintTools(); };
-cv.addEventListener('pointerup', endStroke); cv.addEventListener('pointercancel', endStroke);
-function setDraw(on) { S.draw = on; if (on) P.pause(); paintTools(); }
-$('drawToggle').onclick = () => setDraw(!S.draw);
-$('undoBtn').onclick = () => { S.strokes.pop(); redraw(); paintTools(); };
-$('clearBtn').onclick = () => { S.strokes = []; redraw(); paintTools(); };
-$('saveDrawBtn').onclick = () => {
-  const p = selPlay(); if (!p || !S.strokes.length || !needEdit()) return;
-  p.drawing = { t: P.t, strokes: JSON.parse(JSON.stringify(S.strokes)) };
-  save(p); renderList(); toast(`Dibujo guardado en la jugada ${numOf(p)} (${fmt(P.t)}).`);
-};
-
-// ---------- transport ----------
-function togglePlay() { if (!P.ok) return; P.paused ? P.play() : P.pause(); }
-function step(dt) { P.pause(); P.seek(P.t + dt); }
-$('playBtn').onclick = togglePlay;
-$('back5').onclick = () => { S.clip = false; P.seek(P.t - 5); };
-$('fwd5').onclick = () => { S.clip = false; P.seek(P.t + 5); };
-$('backF').onclick = () => step(-STEP);
-$('fwdF').onclick = () => step(STEP);
-function updPlay() { $('playLbl').textContent = P.paused ? 'Reproducir' : 'Pausa'; }
-updPlay();
-function fsToggle() {
-  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-  else if (stage.requestFullscreen) stage.requestFullscreen().catch(() => toast('Pantalla completa no está disponible aquí.'));
-}
-$('fsBtn').onclick = fsToggle;
-
-let lastDur = 0;
-function tick() {
-  const p = selPlay();
-  if (S.clip && p && !P.paused && P.t >= p.end) {
-    if (S.loop) P.seek(p.start);
-    else if (S.chain) {
-      const list = filtered(), i = list.indexOf(p);
-      if (i >= 0 && i < list.length - 1) playClip(list[i + 1]); else { P.pause(); S.clip = false; }
-    } else { P.pause(); S.clip = false; }
-  }
-  renderHead();
-  const d = P.d; if (Math.abs(d - lastDur) > 5) { lastDur = d; renderTimeline(); }
-  requestAnimationFrame(tick);
-}
-requestAnimationFrame(tick);
-
-function playClip(p) {
-  if (!p) return;
-  select(p.id);
-  if (!P.ok) return;
-  S.clip = true; P.seek(p.start); P.play();
-}
-
-// ---------- timeline ----------
-const tl = $('timeline');
-function renderHead() {
-  const d = P.d, t = P.t, pct = d ? (t / d) * 100 : 0;
-  $('prog').style.width = pct + '%'; $('head').style.left = `calc(${pct}% - 1px)`;
-  $('tc').innerHTML = `<b>${fmt(t)}</b> / ${fmt(d)}`;
-}
-function renderTimeline() {
-  const d = P.d || (S.example ? 120 : 0), m = $('marks'); m.innerHTML = '';
-  if (!d) return;
-  for (const p of S.plays) {
-    const el = document.createElement('div'); el.className = 'mk' + (p.id === S.sel ? ' sel' : '');
-    el.style.left = (p.start / d * 100) + '%'; el.style.width = (Math.max(0, p.end - p.start) / d * 100) + '%';
-    el.style.background = UNIT_COLOR[p.unit] || 'var(--muted)';
-    m.append(el);
-  }
-}
-let scrubbing = false;
-function tlSeek(e) { const r = tl.getBoundingClientRect(); S.clip = false; P.seek(((e.clientX - r.left) / r.width) * P.d); }
-tl.addEventListener('pointerdown', e => { if (!P.ok) return; scrubbing = true; tl.setPointerCapture(e.pointerId); tlSeek(e); });
-tl.addEventListener('pointermove', e => { if (scrubbing) tlSeek(e); });
-tl.addEventListener('pointerup', () => scrubbing = false);
-
-// ---------- plays ----------
-function hasNum(x) { return x !== '' && x != null && isFinite(Number(x)); }
-function nextSituation(prev) {
-  const n = { q: prev.q, unit: prev.unit, side: prev.side, yard: prev.yard, hash: '', down: '', dist: '' };
-  const g = Number(prev.gain);
-  if (prev.yard && hasNum(prev.gain)) {
-    let abs = prev.side === 'P' ? prev.yard : 100 - prev.yard; abs = Math.max(1, Math.min(99, abs + g));
-    n.side = abs <= 50 ? 'P' : 'R'; n.yard = abs <= 50 ? abs : 100 - abs;
-  }
-  if (prev.down && hasNum(prev.dist) && hasNum(prev.gain) && !/Touchdown|Intercepción|Fumble/.test(prev.res || '')) {
-    if (g >= prev.dist) { n.down = '1'; n.dist = 10; }
-    else if (+prev.down < 4) { n.down = String(+prev.down + 1); n.dist = prev.dist - g; }
-  }
-  return n;
-}
-function newPlay() {
-  if (!needEdit()) return;
-  if (cloud.on && !S.vid) { toast('Primero carga el partido de YouTube.'); return; }
-  if (S.example) { S.plays = []; S.example = false; }
-  const t = P.t, d = P.d;
-  const before = sorted().filter(p => p.start <= t).pop();
-  const base = before ? nextSituation(before) : { q: '1', unit: 'O', down: '1', dist: 10, side: 'P', yard: 25, hash: '' };
-  const p = { id: uid(), start: t, end: d ? Math.min(d, t + 8) : t + 8, form: '', type: '', res: '', gain: '', player: '', notes: '', ...base };
-  S.plays.push(p); save(p); select(p.id);
-  $('fForm').focus();
-}
-function select(id) {
-  S.sel = id; renderAll();
-  const p = selPlay();
-  if (p) { const row = document.querySelector(`.row[data-id="${p.id}"]`); row && row.scrollIntoView({ block: 'nearest' }); }
-}
-function moveSel(dir) {
-  const list = filtered(); if (!list.length) return;
-  const i = list.findIndex(p => p.id === S.sel);
-  playClip(list[Math.max(0, Math.min(list.length - 1, i < 0 ? 0 : i + dir))]);
-}
-$('newBtn').onclick = newPlay;
-let delArm = false, delT;
-$('delBtn').onclick = () => {
-  const p = selPlay(); if (!p || !needEdit()) return;
-  if (!delArm) { delArm = true; $('delBtn').textContent = '¿Seguro?'; clearTimeout(delT); delT = setTimeout(() => { delArm = false; $('delBtn').textContent = 'Eliminar'; }, 2500); return; }
-  delArm = false; $('delBtn').textContent = 'Eliminar';
-  S.sel = null; removePlay(p); renderAll(); toast('Jugada eliminada.');
-};
-$('setIn').onclick = () => { const p = selPlay(); if (!p || !P.ok || !needEdit()) return; p.start = P.t; if (p.end < p.start) p.end = p.start + 6; save(p); renderAll(); };
-$('setOut').onclick = () => { const p = selPlay(); if (!p || !P.ok || !needEdit()) return; p.end = Math.max(p.start + 0.5, P.t); save(p); renderAll(); };
-$('clipBtn').onclick = () => playClip(selPlay());
-$('loopBtn').onclick = () => { S.loop = !S.loop; if (S.loop) S.chain = false; paintModes(); };
-$('chainBtn').onclick = () => { S.chain = !S.chain; if (S.chain) S.loop = false; paintModes(); };
-function paintModes() { $('loopBtn').classList.toggle('on', S.loop); $('chainBtn').classList.toggle('on', S.chain); }
-
-const FIELDS = { fQ: 'q', fUnit: 'unit', fDown: 'down', fDist: 'dist', fSide: 'side', fYard: 'yard', fHash: 'hash', fForm: 'form', fType: 'type', fRes: 'res', fGain: 'gain', fPlayer: 'player', fNotes: 'notes' };
-const NUMERIC = new Set(['dist', 'yard', 'gain']);
-Object.entries(FIELDS).forEach(([id, k]) => {
-  $(id).addEventListener('input', () => {
-    const p = selPlay(); if (!p || !canEdit()) return;
-    const raw = $(id).value; p[k] = NUMERIC.has(k) ? (raw === '' ? '' : Number(raw)) : raw;
-    if (p.ex) delete p.ex;
-    save(p); renderList(); renderTimeline(); renderSelHead();
-  });
-});
-function renderSelHead() { const p = selPlay(); $('selNum').textContent = p ? `${numOf(p)} · ${ddText(p)}${posText(p) ? ' · ' + posText(p) : ''}` : '—'; }
-function renderForm() {
-  const p = selPlay();
-  const ed = canEdit();
-  $('form').setAttribute('aria-disabled', p && ed ? 'false' : 'true');
-  $('delBtn').disabled = !p || !ed;
-  $('newBtn').disabled = !ed;
-  Object.entries(FIELDS).forEach(([id, k]) => { const el = $(id); if (document.activeElement !== el) el.value = p ? (p[k] ?? '') : ''; });
-  $('inTc').textContent = p ? fmt(p.start) : '—';
-  $('outTc').textContent = p ? fmt(p.end) : '—';
-  renderSelHead();
-}
-
-function filtered() {
-  const u = $('qUnit').value, d = $('qDown').value, t = $('qType').value, q = $('qText').value.trim().toLowerCase();
-  return sorted().filter(p => (!u || p.unit === u) && (!d || p.down === d) && (!t || p.type === t) &&
-    (!q || [p.form, p.player, p.notes, p.res, p.type].join(' ').toLowerCase().includes(q)));
-}
-['qUnit', 'qDown', 'qType'].forEach(id => $(id).onchange = renderList);
-$('qText').oninput = renderList;
-function esc(s) { return String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
-function renderList() {
-  const all = sorted(), list = filtered(), rows = $('rows');
-  $('count').textContent = list.length === all.length ? all.length : `${list.length}/${all.length}`;
-  if (!all.length) rows.innerHTML = `<div class="empty">Aún no hay jugadas. Pausa en el snap y presiona <kbd>N</kbd> para etiquetar la primera.</div>`;
-  else if (!list.length) rows.innerHTML = `<div class="empty">Ninguna jugada coincide con los filtros.</div>`;
-  else rows.innerHTML = list.map(p => {
-    const g = hasNum(p.gain) ? Number(p.gain) : '';
-    const gCls = g === '' ? '' : g > 0 ? 'pos' : g < 0 ? 'neg' : '';
-    const sub = [p.form, p.player, p.notes].filter(Boolean).join(' · ');
-    return `<button class="row${p.id === S.sel ? ' sel' : ''}" data-id="${p.id}">
-      <span class="n">${all.indexOf(p) + 1}</span>
-      <span class="bar" style="background:${UNIT_COLOR[p.unit] || 'var(--muted)'}"></span>
-      <span class="main">
-        <span class="top"><span class="chip">${esc(ddText(p))}</span>${posText(p) ? `<span class="tag">${esc(posText(p))}</span>` : ''}<span>${esc(p.type || 'Sin tipo')}</span>${p.res ? `<span class="tag">${esc(p.res)}</span>` : ''}${p.drawing ? '<span class="tag draw">✎ dibujo</span>' : ''}${p.ex ? '<span class="tag ex">Ejemplo</span>' : ''}</span>
-        <span class="sub">${esc(UNIT_NAME[p.unit] || '')} · C${esc(p.q)} · ${fmt(p.start)}${sub ? ' · ' + esc(sub) : ''}</span>
-      </span>
-      <span class="gain ${gCls}">${g === '' ? '' : (g > 0 ? '+' : '') + g}</span>
-    </button>`;
-  }).join('');
-  const withGain = list.filter(p => hasNum(p.gain) && /Carrera|Pase|Play action|Pantalla|Opción|sneak/.test(p.type || ''));
-  const yds = withGain.reduce((a, p) => a + Number(p.gain), 0);
-  const runs = withGain.filter(p => /Carrera|sneak/.test(p.type)), passes = withGain.filter(p => !/Carrera|sneak/.test(p.type));
-  const avg = arr => arr.length ? (arr.reduce((a, p) => a + Number(p.gain), 0) / arr.length).toFixed(1) : '—';
-  const third = list.filter(p => p.down === '3'), conv = third.filter(p => /Primer down|Touchdown/.test(p.res || '') || (hasNum(p.gain) && hasNum(p.dist) && Number(p.gain) >= Number(p.dist)));
-  $('stats').innerHTML = `<span>Yardas <b>${yds}</b></span><span>Prom. carrera <b>${avg(runs)}</b></span><span>Prom. pase <b>${avg(passes)}</b></span><span>3er down <b>${conv.length}/${third.length}</b></span>`;
-  paintTools();
-}
-$('rows').addEventListener('click', e => {
-  const r = e.target.closest('.row'); if (!r) return;
-  const p = S.plays.find(x => x.id === r.dataset.id);
-  if (p && p.drawing && P.ok) {
-    select(p.id); S.clip = false;
-    S.keepDrawUntil = Date.now() + 2500;
-    P.seek(p.drawing.t);
-    setTimeout(() => { P.pause(); S.strokes = JSON.parse(JSON.stringify(p.drawing.strokes)); redraw(); paintTools(); }, 900);
-    toast('Telestración de la jugada. Presiona C para ver el clip completo.');
-  } else playClip(p);
-});
-function renderAll() { renderForm(); renderList(); renderTimeline(); renderHead(); paintTools(); }
-
-// ---------- import / export ----------
-$('importInput').onchange = async e => {
-  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
-  if (!needEdit()) return;
-  try {
-    const data = JSON.parse(await f.text());
-    const plays = Array.isArray(data) ? data : data.plays;
-    if (!Array.isArray(plays)) throw new Error();
-    if (data.youtube && data.youtube !== S.vid) loadUrl(data.youtube);
-    if (cloud.on && !S.vid) { toast('Primero carga el partido de YouTube.'); return; }
-    S.plays = plays.map(p => { const o = { ...p, id: p.id || uid() }; delete o.ex; return o; }); S.example = false; S.sel = null;
-    save(); renderAll();
-    toast(`Se importaron ${plays.length} jugadas.`);
-  } catch (err) { toast('No se pudo leer el archivo. Usa un .json exportado desde Sideline.'); }
-};
-function download(filename, text, type) {
-  const url = URL.createObjectURL(new Blob([text], { type }));
-  const a = document.createElement('a'); a.href = url; a.download = filename; document.body.append(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
-}
-const baseName = () => 'partido-' + (S.vid || 'sin-video');
-$('exportJson').onclick = () => {
-  if (!S.plays.length) return toast('No hay jugadas para exportar.');
-  download(baseName() + '-etiquetas.json', JSON.stringify({ app: 'Sideline', version: 1, youtube: S.vid, exported: new Date().toISOString(), plays: sorted() }, null, 2), 'application/json');
-};
-$('exportCsv').onclick = () => {
-  if (!S.plays.length) return toast('No hay jugadas para exportar.');
-  const cols = [['#', (p, i) => i + 1], ['Inicio', p => fmt(p.start)], ['Fin', p => fmt(p.end)], ['Enlace', p => S.vid ? `https://youtu.be/${S.vid}?t=${Math.floor(p.start)}` : ''], ['Cuarto', p => p.q], ['Unidad', p => UNIT_NAME[p.unit]], ['Down', p => p.down], ['Yardas a avanzar', p => p.dist], ['Posición', p => posText(p)], ['Hash', p => p.hash], ['Formación', p => p.form], ['Tipo', p => p.type], ['Resultado', p => p.res], ['Yardas', p => p.gain], ['Jugadores', p => p.player], ['Notas', p => p.notes]];
-  const q = s => { s = String(s ?? ''); return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
-  download(baseName() + '-jugadas.csv', '﻿' + [cols.map(c => c[0]).join(','), ...sorted().map((p, i) => cols.map(c => q(c[1](p, i))).join(','))].join('\n'), 'text/csv');
-};
-
-// ---------- help & keyboard ----------
-$('helpBtn').onclick = () => $('help').hidden = false;
-$('helpClose').onclick = () => $('help').hidden = true;
-$('help').onclick = e => { if (e.target === $('help')) $('help').hidden = true; };
-document.addEventListener('keydown', e => {
-  const tag = (e.target.tagName || '').toLowerCase();
-  if (e.key === 'Escape') { $('help').hidden = true; if (['input', 'textarea', 'select'].includes(tag)) e.target.blur(); if (S.draw) setDraw(false); return; }
-  if (['input', 'textarea', 'select'].includes(tag) || e.metaKey || e.ctrlKey || e.altKey) return;
-  const k = e.key;
-  if (k === ' ') { e.preventDefault(); togglePlay(); }
-  else if (k === 'ArrowLeft') { e.preventDefault(); if (e.shiftKey) { S.clip = false; P.seek(P.t - 5); } else step(-STEP); }
-  else if (k === 'ArrowRight') { e.preventDefault(); if (e.shiftKey) { S.clip = false; P.seek(P.t + 5); } else step(STEP); }
-  else if (k === 'ArrowUp') { e.preventDefault(); moveSel(-1); }
-  else if (k === 'ArrowDown') { e.preventDefault(); moveSel(1); }
-  else if (k >= '1' && k <= '5') setSpeed(SPEEDS[+k - 1]);
-  else if (k === 'n' || k === 'N') { e.preventDefault(); newPlay(); }
-  else if (k === 'i' || k === 'I') $('setIn').click();
-  else if (k === 'o' || k === 'O') $('setOut').click();
-  else if (k === 'c' || k === 'C') playClip(selPlay());
-  else if (k === 'd' || k === 'D') setDraw(!S.draw);
-  else if (k === 'z' || k === 'Z') $('undoBtn').click();
-  else if (k === 'f' || k === 'F') fsToggle();
-  else if (k === '?') $('help').hidden = !$('help').hidden;
-});
-
-S.sel = 'e2';
-paintModes(); renderAll();
-// open from ?v=ID or the last video used
-const qv = new URLSearchParams(location.search).get('v');
-let last = null; try { last = localStorage.getItem('salavideo-yt:last'); } catch (e) {}
-if (qv) loadUrl(qv); else if (last) $('urlInput2').value = 'https://www.youtube.com/watch?v=' + last;
-if (window.YT && YT.Player) window.onYouTubeIframeAPIReady();
 })();
 </script>
 </body>
